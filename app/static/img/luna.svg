@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FEF3C7"/>
+      <stop offset="100%" stop-color="#FDE68A"/>
+    </linearGradient>
+    <linearGradient id="furGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#D97706"/>
+    </linearGradient>
+  </defs>
+  <circle cx="150" cy="150" r="140" fill="url(#bgGrad)" stroke="#F59E0B" stroke-width="4"/>
+  <!-- Orejas -->
+  <path d="M 60,110 C 40,160 50,220 90,200 C 100,170 90,130 80,110 Z" fill="#B45309"/>
+  <path d="M 240,110 C 260,160 250,220 210,200 C 200,170 210,130 220,110 Z" fill="#B45309"/>
+  <!-- Cabeza -->
+  <ellipse cx="150" cy="155" rx="75" ry="70" fill="url(#furGrad)"/>
+  <!-- Hocico -->
+  <ellipse cx="150" cy="180" rx="42" ry="32" fill="#FEF3C7"/>
+  <polygon points="150,168 138,180 162,180" fill="#1F2937"/>
+  <path d="M 150,180 L 150,195 M 135,190 Q 150,205 165,190" stroke="#1F2937" stroke-width="3" stroke-linecap="round" fill="none"/>
+  <!-- Ojos -->
+  <circle cx="120" cy="140" r="9" fill="#1F2937"/>
+  <circle cx="123" cy="138" r="3" fill="#FFFFFF"/>
+  <circle cx="180" cy="140" r="9" fill="#1F2937"/>
+  <circle cx="183" cy="138" r="3" fill="#FFFFFF"/>
+  <!-- Cejas simpáticas -->
+  <path d="M 110,126 Q 120,120 130,126" stroke="#92400E" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M 170,126 Q 180,120 190,126" stroke="#92400E" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <!-- Placa collar -->
+  <path d="M 105,220 Q 150,240 195,220" stroke="#EF4444" stroke-width="10" stroke-linecap="round" fill="none"/>
+  <circle cx="150" cy="245" r="14" fill="#F59E0B" stroke="#B45309" stroke-width="2"/>
+  <text x="150" y="249" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="#78350F" text-anchor="middle">QR</text>
+</svg>

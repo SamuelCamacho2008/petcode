@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PetCode — Dashboard del Propietario</title>
+  <link rel="icon" type="image/svg+xml" href="/static/img/logo.svg">
+  <link rel="stylesheet" href="/static/css/style.css">
+  
+  <!-- Leaflet Map CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+</head>
+<body style="background: #f1f5f9;">
+  <!-- Canvas para animación de Confeti de Recuperación -->
+  <canvas id="confetti-canvas"></canvas>
+
+  <header class="header">
+    <a href="/dashboard" class="brand">
+      <img src="/static/img/logo.svg" alt="PetCode Logo" class="brand-icon">
+      <span>PetCode Propietario</span>
+    </a>
+    
+    <!-- Selector de Mascota para Pruebas Multi-Mascota y Botón de Registro -->
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <label for="pet-selector" style="font-size: 0.82rem; font-weight: 700; color: var(--color-text-muted);">Mascota:</label>
+      <select id="pet-selector" class="input-field" style="margin-bottom: 0; min-height: 40px; padding: 4px 10px; font-weight: bold; width: auto;" onchange="window.location.href='/dashboard?token=' + this.value">
+        {% for p in all_pets %}
+          <option value="{{ p.token }}" {% if p.token == pet.token %}selected{% endif %}>
+            {{ p.name }} ({{ p.token }})
+          </option>
+        {% endfor %}
+      </select>
+      <a href="/registro" class="btn btn-primary" style="min-height: 40px; padding: 6px 14px; font-size: 0.82rem; width: auto; font-weight: 700; text-decoration: none;">
+        + Registrar Mascota
+      </a>
+    </div>
+  </header>
+
+  <main class="container container-wide" style="padding-top: 16px;">
+    <!-- Fila Superior: Datos de Mascota, Switch de Estado y Botón Recuperada -->
+    <div class="card" style="margin-bottom: 20px;">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px;">
+        <!-- Información Principal -->
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <div style="width: 72px; height: 72px; border-radius: 50%; overflow: hidden; border: 3px solid var(--color-border); flex-shrink: 0;">
+            <img src="{{ pet.photo_url }}" alt="{{ pet.name }}" style="width: 100%; height: 100%; object-fit: cover;">
+          </div>
+          <div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <h1 style="font-size: 1.5rem; font-weight: 800; line-height: 1.2;">{{ pet.name }}</h1>
+              <span id="current-status-badge" class="{% if pet.status.value == 'LOST' %}badge-lost{% else %}badge-home{% endif %}">
+                {% if pet.status.value == 'LOST' %}🚨 MODO MASCOTA PERDIDA{% else %}🏠 EN CASA{% endif %}
+              </span>
+            </div>
+            <p style="font-size: 0.88rem; color: var(--color-text-muted); margin-top: 2px;">
+              Placa: <strong>{{ pet.token }}</strong> · {{ pet.species }} ({{ pet.breed }}) · <a href="/q/{{ pet.token }}" target="_blank" style="color: var(--color-primary); text-decoration: underline; font-weight: 600;">Ver Ficha Pública</a>
+            </p>
+          </div>
+        </div>
+
+        <!-- Controles de Estado y Recuperación -->
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px;">
+          <!-- Switch LOST vs AT_HOME -->
+          <div style="display: flex; align-items: center; background: #e2e8f0; border-radius: var(--radius-full); padding: 4px;">
+            <button
+              type="button"
+              id="btn-status-home"
+              class="btn"
+              style="min-height: 42px; padding: 6px 14px; font-size: 0.85rem; border-radius: var(--radius-full); width: auto; {% if pet.status.value == 'AT_HOME' %}background: var(--color-success); color: white;{% else %}background: transparent; color: #475569;{% endif %}"
+            >
+              🏠 En Casa
+            </button>
+            <button
+              type="button"
+              id="btn-status-lost"
+              class="btn"
+              style="min-height: 42px; padding: 6px 14px; font-size: 0.85rem; border-radius: var(--radius-full); width: auto; {% if pet.status.value == 'LOST' %}background: var(--color-danger); color: white;{% else %}background: transparent; color: #475569;{% endif %}"
+            >
+              🚨 Perdida
+            </button>
+          </div>
+
+          <!-- Botón ¡Mascota Recuperada! con Confeti (RF-DASH-01 CA4) -->
+          <button type="button" class="btn btn-success" id="btn-pet-recovered" style="min-height: 48px; width: auto; padding: 10px 18px;">
+            🎉 ¡Mascota Recuperada!
+          </button>
+
+          <!-- Botón Ver e Imprimir Placa QR para Collar -->
+          <a href="/dashboard/plaque/{{ pet.token }}" class="btn" style="min-height: 48px; width: auto; padding: 10px 16px; background: #ffffff; border: 1px solid var(--color-border); font-size: 0.88rem; font-weight: 700; color: #1e293b;" target="_blank">
+            🖨️ Placa QR Collar
+          </a>
+
+          <!-- Botón Simulador de Interacción en Tiempo Real (Rescatista ↔ Dueño) -->
+          <a href="/simulador/{{ pet.token }}" class="btn" style="min-height: 48px; width: auto; padding: 10px 16px; background: #0284c7; color: white; font-size: 0.88rem; font-weight: 700;" target="_blank">
+            💬 Probar Chat en Vivo (Simulador)
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Grid Central: Mapa / Geovisor + Bandeja de Chats -->
+    <div class="dashboard-grid">
+      <!-- Columna Izquierda: Geovisor Satelital Leaflet (RF-DASH-01 CA2) -->
+      <div class="card">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+          <h2 style="font-size: 1.15rem; font-weight: 700;">📍 Geovisor de Escaneos</h2>
+          <span style="font-size: 0.78rem; color: var(--color-text-muted);" id="last-scan-time">Cargando último reporte...</span>
+        </div>
+        
+        <div id="map"></div>
+        <p style="font-size: 0.78rem; color: var(--color-text-muted); margin-top: 8px;">
+          🔵 <strong>Radio de Incertidumbre:</strong> El círculo azul refleja el margen de precisión satelital (metros) capturado por el GPS del rescatista.
+        </p>
+
+        <!-- Historial Reciente de Escaneos -->
+        <h3 style="font-size: 0.95rem; font-weight: 700; margin-top: 16px; margin-bottom: 8px;">Historial de Reportes</h3>
+        <div id="scans-list" style="max-height: 180px; overflow-y: auto; font-size: 0.85rem;">
+          <!-- Items dinámicos -->
+        </div>
+      </div>
+
+      <!-- Columna Derecha: Bandeja de Chats Activos con Rescatistas (RF-DASH-01 CA3) -->
+      <div class="card">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+          <h2 style="font-size: 1.15rem; font-weight: 700;">💬 Chats Activos con Rescatistas</h2>
+          <span class="badge-home" id="chat-count-badge" style="font-size: 0.75rem; padding: 4px 10px;">0 Activos</span>
+        </div>
+
+        <div id="chats-container" style="display: flex; flex-direction: column; gap: 10px;">
+          <!-- Chats dinámicos -->
+          <div style="text-align: center; color: var(--color-text-muted); padding: 30px;">
+            Buscando comunicaciones activas...
+          </div>
+        </div>
+
+        <!-- Registro de Notificaciones Despachadas -->
+        <h3 style="font-size: 0.95rem; font-weight: 700; margin-top: 20px; margin-bottom: 8px;">
+          🔔 Alertas Enviadas al Propietario (Mock Notification Strategy)
+        </h3>
+        <div id="notifications-list" style="max-height: 160px; overflow-y: auto; font-size: 0.82rem; background: #f8fafc; border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 8px;">
+          <!-- Notificaciones dinámicas -->
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const PET_TOKEN = "{{ pet.token }}";
+    let map = null;
+    let scanMarker = null;
+    let accuracyCircle = null;
+
+    // Inicializar Mapa Leaflet
+    function initMap() {
+      // Coordenadas por defecto (Bogotá)
+      map = L.map('map').setView([4.6983, -74.0450], 14);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+    }
+
+    // Actualizar Posición en el Mapa con Círculo de Incertidumbre (RF-DASH-01 CA2)
+    function updateMapPosition(lat, lon, accuracy, description) {
+      if (!map) return;
+
+      const pos = [lat, lon];
+      map.setView(pos, 15);
+
+      if (scanMarker) map.removeLayer(scanMarker);
+      if (accuracyCircle) map.removeLayer(accuracyCircle);
+
+      scanMarker = L.marker(pos).addTo(map)
+        .bindPopup(`<b>Último Escaneo:</b><br>${description}<br>Precisión: ±${Math.round(accuracy || 10)}m`)
+        .openPopup();
+
+      // Círculo de radio de incertidumbre en metros
+      accuracyCircle = L.circle(pos, {
+        radius: accuracy || 30,
+        color: '#2563eb',
+        fillColor: '#3b82f6',
+        fillOpacity: 0.25,
+        weight: 2
+      }).addTo(map);
+    }
+
+    // Web Audio API sintetizador de beep para nuevas alertas/mensajes
+    function playBeepSound() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // Nota Re5
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.35);
+      } catch (e) {
+        // Fallback silencioso si el navegador bloquea audio sin interacción
+      }
+    }
+
+    // Carga de Datos del Dashboard
+    async function fetchDashboardData() {
+      try {
+        const res = await fetch(`/api/v1/dashboard/data?token=${PET_TOKEN}`);
+        if (!res.ok) return;
+        const data = await res.json();
+
+        // 1. Actualizar estado
+        updateStatusUI(data.pet.status);
+
+        // 2. Actualizar Escaneos y Mapa
+        const scansList = document.getElementById("scans-list");
+        scansList.innerHTML = "";
+        const lastScanTime = document.getElementById("last-scan-time");
+
+        if (data.recent_scans && data.recent_scans.length > 0) {
+          const latest = data.recent_scans[0];
+          lastScanTime.textContent = "Último: " + new Date(latest.created_at).toLocaleTimeString();
+
+          if (latest.latitude && latest.longitude) {
+            updateMapPosition(latest.latitude, latest.longitude, latest.accuracy, `${data.pet.name} localizado`);
+          }
+
+          data.recent_scans.forEach(scan => {
+            const item = document.createElement("div");
+            item.style.padding = "6px 0";
+            item.style.borderBottom = "1px solid var(--color-border)";
+            const time = new Date(scan.created_at).toLocaleString();
+            
+            if (scan.latitude && scan.longitude) {
+              item.innerHTML = `🛰️ <strong>GPS:</strong> ${scan.latitude.toFixed(4)}, ${scan.longitude.toFixed(4)} (±${Math.round(scan.accuracy||0)}m) <span style="float:right; color:#64748b; font-size:0.75rem;">${time}</span>`;
+            } else if (scan.manual_address) {
+              item.innerHTML = `📝 <strong>Manual:</strong> "${escapeHTML(scan.manual_address)}" <span style="float:right; color:#64748b; font-size:0.75rem;">${time}</span>`;
+            } else {
+              item.innerHTML = `ℹ️ Escaneo registrado (sin coordenadas) <span style="float:right; color:#64748b; font-size:0.75rem;">${time}</span>`;
+            }
+            scansList.appendChild(item);
+          });
+        } else {
+          lastScanTime.textContent = "Sin escaneos aún";
+          scansList.innerHTML = "<p style='color:#64748b;'>No hay registros de escaneos para esta mascota.</p>";
+        }
+
+        // 3. Actualizar Chats Activos (RF-DASH-01 CA3)
+        const chatsContainer = document.getElementById("chats-container");
+        const chatCountBadge = document.getElementById("chat-count-badge");
+        chatsContainer.innerHTML = "";
+
+        if (data.active_chat_sessions && data.active_chat_sessions.length > 0) {
+          chatCountBadge.textContent = `${data.active_chat_sessions.length} Activo(s)`;
+          chatCountBadge.className = "badge-lost";
+
+          data.active_chat_sessions.forEach(sess => {
+            const card = document.createElement("div");
+            card.style.background = "#f8fafc";
+            card.style.border = "1.5px solid #3b82f6";
+            card.style.borderRadius = "8px";
+            card.style.padding = "12px";
+
+            const lastMsg = sess.messages.length > 0 ? sess.messages[sess.messages.length - 1].text : "Sesión abierta, esperando mensaje...";
+
+            card.innerHTML = `
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <strong>${escapeHTML(sess.rescuer_alias)}</strong>
+                <span style="font-size:0.72rem; color:#64748b;">${sess.messages.length} mensajes</span>
+              </div>
+              <p style="font-size:0.85rem; color:#334155; margin:6px 0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                "${escapeHTML(lastMsg)}"
+              </p>
+              <a href="/chat/${sess.session_token}?role=owner" class="btn btn-primary" style="min-height:42px; font-size:0.88rem; padding:6px 12px;">
+                💬 Responder como Dueño
+              </a>
+            `;
+            chatsContainer.appendChild(card);
+          });
+        } else {
+          chatCountBadge.textContent = "0 Activos";
+          chatCountBadge.className = "badge-home";
+          chatsContainer.innerHTML = "<p style='color:#64748b; text-align:center; padding:16px;'>No hay chats activos actualmente.</p>";
+        }
+
+        // 4. Actualizar Notificaciones Mock
+        const notifContainer = document.getElementById("notifications-list");
+        notifContainer.innerHTML = "";
+        if (data.recent_notifications && data.recent_notifications.length > 0) {
+          data.recent_notifications.forEach(n => {
+            const el = document.createElement("div");
+            el.style.marginBottom = "6px";
+            el.style.borderBottom = "1px solid #e2e8f0";
+            el.style.paddingBottom = "4px";
+            el.innerHTML = `<strong>[${n.channel}]</strong> ${escapeHTML(n.title)} <span style="float:right; font-size:0.7rem; color:#64748b;">${new Date(n.timestamp).toLocaleTimeString()}</span><br><span style="color:#475569;">${escapeHTML(n.body)}</span>`;
+            notifContainer.appendChild(el);
+          });
+        } else {
+          notifContainer.innerHTML = "<span style='color:#64748b;'>Sin notificaciones recientes registradas.</span>";
+        }
+
+      } catch (err) {
+        console.error("Error al cargar datos del dashboard:", err);
+      }
+    }
+
+    function escapeHTML(str) {
+      if (!str) return "";
+      const div = document.createElement("div");
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    // Cambiar estado en UI
+    function updateStatusUI(status) {
+      const badge = document.getElementById("current-status-badge");
+      const btnHome = document.getElementById("btn-status-home");
+      const btnLost = document.getElementById("btn-status-lost");
+
+      if (status === "LOST") {
+        badge.className = "badge-lost";
+        badge.textContent = "🚨 MODO MASCOTA PERDIDA";
+        btnLost.style.background = "var(--color-danger)";
+        btnLost.style.color = "white";
+        btnHome.style.background = "transparent";
+        btnHome.style.color = "#475569";
+      } else {
+        badge.className = "badge-home";
+        badge.textContent = "🏠 EN CASA";
+        btnHome.style.background = "var(--color-success)";
+        btnHome.style.color = "white";
+        btnLost.style.background = "transparent";
+        btnLost.style.color = "#475569";
+      }
+    }
+
+    // Switch de Estado (LOST / AT_HOME) (RF-DASH-01 CA1)
+    async function setPetStatus(newStatus) {
+      try {
+        const res = await fetch("/api/v1/dashboard/status", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: PET_TOKEN, status: newStatus })
+        });
+        if (res.ok) {
+          updateStatusUI(newStatus);
+        }
+      } catch (e) {
+        alert("Error al actualizar estado.");
+      }
+    }
+
+    document.getElementById("btn-status-home").addEventListener("click", () => setPetStatus("AT_HOME"));
+    document.getElementById("btn-status-lost").addEventListener("click", () => setPetStatus("LOST"));
+
+    // Botón ¡Mascota Recuperada! con Confeti (RF-DASH-01 CA4)
+    document.getElementById("btn-pet-recovered").addEventListener("click", async function() {
+      try {
+        const res = await fetch("/api/v1/dashboard/recover", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: PET_TOKEN })
+        });
+
+        if (res.ok) {
+          updateStatusUI("AT_HOME");
+          launchConfetti();
+          playBeepSound();
+          alert(`🎉 ¡Excelente noticia! ${"{{ pet.name }}"} ha sido marcada como recuperada y las sesiones de rescate han sido archivadas.`);
+          fetchDashboardData();
+        }
+      } catch (err) {
+        alert("Error al procesar recuperación.");
+      }
+    });
+
+    // Motor de Confeti Ultraliviano en Canvas Puro (Cero dependencias externas)
+    function launchConfetti() {
+      const canvas = document.getElementById("confetti-canvas");
+      const ctx = canvas.getContext("2d");
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      const particles = [];
+      const colors = ["#2563eb", "#10b981", "#f59e0b", "#ec4899", "#8b5cf6", "#ef4444"];
+
+      for (let i = 0; i < 150; i++) {
+        particles.push({
+          x: canvas.width / 2,
+          y: canvas.height / 2,
+          r: Math.random() * 6 + 4,
+          dx: (Math.random() - 0.5) * 16,
+          dy: (Math.random() - 0.8) * 16,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          tilt: Math.random() * 10,
+          tiltAngle: 0,
+          tiltAngleIncremental: (Math.random() * 0.08) + 0.04
+        });
+      }
+
+      let animationFrameId;
+      let frameCount = 0;
+
+      function render() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        let activeParticles = 0;
+
+        for (let i = 0; i < particles.length; i++) {
+          const p = particles[i];
+          p.x += p.dx;
+          p.y += p.dy;
+          p.dy += 0.25; // Gravedad
+          p.tiltAngle += p.tiltAngleIncremental;
+          p.tilt = Math.sin(p.tiltAngle) * 12;
+
+          if (p.y < canvas.height) {
+            activeParticles++;
+            ctx.beginPath();
+            ctx.lineWidth = p.r;
+            ctx.strokeStyle = p.color;
+            ctx.moveTo(p.x + p.tilt + (p.r / 2), p.y);
+            ctx.lineTo(p.x + p.tilt, p.y + p.tilt + (p.r / 2));
+            ctx.stroke();
+          }
+        }
+
+        frameCount++;
+        if (activeParticles > 0 && frameCount < 220) {
+          animationFrameId = requestAnimationFrame(render);
+        } else {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          cancelAnimationFrame(animationFrameId);
+        }
+      }
+
+      render();
+    }
+
+    // Inicializar mapa y polling periódico
+    window.addEventListener("DOMContentLoaded", () => {
+      initMap();
+      fetchDashboardData();
+      setInterval(fetchDashboardData, 5000);
+    });
+  </script>
+</body>
+</html>

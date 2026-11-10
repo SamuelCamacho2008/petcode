@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PetCode — Mascota No Encontrada</title>
+  <link rel="icon" type="image/svg+xml" href="/static/img/logo.svg">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body style="text-align: center;">
+  <header class="header">
+    <a href="/" class="brand">
+      <img src="/static/img/logo.svg" alt="PetCode Logo" class="brand-icon">
+      <span>PetCode</span>
+    </a>
+  </header>
+
+  <main class="container" style="padding-top: 40px;">
+    <div class="card">
+      <div style="font-size: 3.5rem; margin-bottom: 12px;">🐾❓</div>
+      <h1 style="font-size: 1.4rem; font-weight: 800; margin-bottom: 8px;">Placa no registrada</h1>
+      <p style="color: var(--color-text-muted); font-size: 0.95rem; margin-bottom: 20px;">
+        La placa con token <strong>"{{ token }}"</strong> no se encuentra registrada o el código QR ha expirado en el sistema PetCode.
+      </p>
+      <a href="/dashboard" class="btn btn-primary">
+        Ir al Dashboard
+      </a>
+    </div>
+  </main>
+</body>
+</html>

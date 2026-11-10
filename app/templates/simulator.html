@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PetCode — Simulador de Interacción Rescatista ↔ Dueño</title>
+  <link rel="icon" type="image/svg+xml" href="/static/img/logo.svg">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <style>
+    .simulator-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-top: 16px;
+    }
+    @media (max-width: 900px) {
+      .simulator-container {
+        grid-template-columns: 1fr;
+      }
+    }
+    .sim-panel {
+      background: #ffffff;
+      border: 2px solid var(--color-border);
+      border-radius: 20px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: 600px;
+      box-shadow: var(--shadow-md);
+    }
+    .sim-header-rescuer {
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      color: #ffffff;
+      padding: 14px 18px;
+    }
+    .sim-header-owner {
+      background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+      color: #ffffff;
+      padding: 14px 18px;
+    }
+    .quick-replies {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      padding: 8px 12px;
+      background: #f8fafc;
+      border-top: 1px solid var(--color-border);
+    }
+    .quick-reply-btn {
+      font-size: 0.76rem;
+      padding: 4px 10px;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      cursor: pointer;
+      color: #334155;
+      transition: all 0.15s ease;
+    }
+    .quick-reply-btn:hover {
+      background: #e2e8f0;
+      color: #0f172a;
+    }
+  </style>
+</head>
+<body style="background: #f1f5f9;">
+  <header class="header">
+    <a href="/dashboard?token={{ pet.token }}" class="brand">
+      <img src="/static/img/logo.svg" alt="PetCode Logo" class="brand-icon">
+      <span>PetCode · Simulador en Vivo</span>
+    </a>
+    <div style="display: flex; gap: 8px;">
+      <a href="/dashboard?token={{ pet.token }}" class="btn" style="min-height: 40px; width: auto; padding: 6px 14px; font-size: 0.85rem; background: var(--color-surface); border: 1px solid var(--color-border);">
+        ← Volver al Dashboard
+      </a>
+      <a href="/q/{{ pet.token }}" class="btn" style="min-height: 40px; width: auto; padding: 6px 14px; font-size: 0.85rem; background: var(--color-primary); color: white;" target="_blank">
+        Ver Ficha Pública QR
+      </a>
+    </div>
+  </header>
+
+  <main class="container container-wide" style="padding-top: 16px; padding-bottom: 30px;">
+    <!-- Barra Explicativa Superior -->
+    <div style="background: #ffffff; border: 1px solid #bfdbfe; border-radius: 16px; padding: 14px 20px; box-shadow: var(--shadow-sm); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+      <div>
+        <h1 style="font-size: 1.15rem; font-weight: 800; color: #1e3a8a; margin: 0;">
+          💬 Simulación de Interacción en Tiempo Real: {{ pet.name }} ({{ pet.token }})
+        </h1>
+        <p style="font-size: 0.85rem; color: #475569; margin: 4px 0 0 0;">
+          Observa cómo se comunican las dos personas sin exponer sus números de teléfono. Escribe o usa las respuestas rápidas en cualquiera de los dos lados para ver la transmisión instantánea.
+        </p>
+      </div>
+      <div style="font-size: 0.82rem; font-weight: 700; color: #16a34a; background: #dcfce7; padding: 6px 12px; border-radius: 20px; display: flex; align-items: center; gap: 6px;">
+        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#16a34a;"></span>
+        SSE Sincronizado en Vivo
+      </div>
+    </div>
+
+    <!-- Contenedor Dividido: Rescatista vs Dueño -->
+    <div class="simulator-container">
+      
+      <!-- =================================================================== -->
+      <!-- LADO 1: RESCATISTA (Móvil en Calle) -->
+      <!-- =================================================================== -->
+      <div class="sim-panel">
+        <div class="sim-header-rescuer">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 1.3rem;">📱</span>
+              <div>
+                <strong style="font-size: 0.95rem; display: block;">Rescatista (En la Calle)</strong>
+                <span style="font-size: 0.75rem; opacity: 0.9;">Identidad: <strong>Rescatista</strong> (Anónimo)</span>
+              </div>
+            </div>
+            <span style="font-size: 0.72rem; background: rgba(255,255,255,0.2); padding: 4px 8px; border-radius: 8px;">
+              Rol: Rescatista
+            </span>
+          </div>
+        </div>
+
+        <!-- Mensajes del Rescatista -->
+        <div class="chat-messages" id="rescuer-messages" style="flex: 1; overflow-y: auto; padding: 14px;">
+          <!-- Mensajes dinámicos -->
+        </div>
+
+        <!-- Respuestas rápidas Rescatista -->
+        <div class="quick-replies">
+          <span style="font-size: 0.75rem; font-weight: 700; color: #64748b; width: 100%;">⚡ Mensajes rápidos del Rescatista:</span>
+          <button type="button" class="quick-reply-btn" onclick="sendRescuerMsg('¡Hola! Encontré a tu mascota {{ pet.name }} en el parque.')">
+            🐾 "Encontré a tu mascota"
+          </button>
+          <button type="button" class="quick-reply-btn" onclick="sendRescuerMsg('Está bien, le di agua fresca y está tranquilo conmigo.')">
+            💧 "Está bien y tranquilo"
+          </button>
+          <button type="button" class="quick-reply-btn" onclick="sendRescuerMsg('Estoy en la cafetería de la esquina esperando.')">
+            📍 "Estoy en la esquina"
+          </button>
+        </div>
+
+        <!-- Input Bar Rescatista -->
+        <form id="rescuer-form" class="chat-input-bar" onsubmit="handleRescuerSubmit(event)">
+          <input
+            type="text"
+            id="rescuer-input"
+            class="input-field"
+            style="margin-bottom: 0; min-height: 44px; flex: 1;"
+            placeholder="Escribe como Rescatista..."
+            autocomplete="off"
+            required
+          />
+          <button type="submit" class="btn btn-primary" style="width: 44px; min-width: 44px; height: 44px; padding: 0;" title="Enviar como Rescatista">
+            ➤
+          </button>
+        </form>
+      </div>
+
+      <!-- =================================================================== -->
+      <!-- LADO 2: PROPIETARIO (Dueño de la Mascota) -->
+      <!-- =================================================================== -->
+      <div class="sim-panel">
+        <div class="sim-header-owner">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 1.3rem;">💻</span>
+              <div>
+                <strong style="font-size: 0.95rem; display: block;">Propietario (En su Dashboard)</strong>
+                <span style="font-size: 0.75rem; opacity: 0.9;">Identidad: <strong>Dueño de {{ pet.name }}</strong></span>
+              </div>
+            </div>
+            <span style="font-size: 0.72rem; background: rgba(255,255,255,0.2); padding: 4px 8px; border-radius: 8px;">
+              Rol: Dueño
+            </span>
+          </div>
+        </div>
+
+        <!-- Mensajes del Dueño -->
+        <div class="chat-messages" id="owner-messages" style="flex: 1; overflow-y: auto; padding: 14px;">
+          <!-- Mensajes dinámicos -->
+        </div>
+
+        <!-- Respuestas rápidas Dueño -->
+        <div class="quick-replies">
+          <span style="font-size: 0.75rem; font-weight: 700; color: #64748b; width: 100%;">⚡ Mensajes rápidos del Dueño:</span>
+          <button type="button" class="quick-reply-btn" onclick="sendOwnerMsg('¡Muchísimas gracias por avisarme! No sabes el alivio.')">
+            🙏 "¡Muchísimas gracias!"
+          </button>
+          <button type="button" class="quick-reply-btn" onclick="sendOwnerMsg('Ya voy saliendo para allá, tardo 10 minutos.')">
+            🏃 "Voy en camino (10 min)"
+          </button>
+          <button type="button" class="quick-reply-btn" onclick="sendOwnerMsg('Llevo una chaqueta azul para que me reconozcas.')">
+            👕 "Llevo chaqueta azul"
+          </button>
+        </div>
+
+        <!-- Input Bar Dueño -->
+        <form id="owner-form" class="chat-input-bar" onsubmit="handleOwnerSubmit(event)">
+          <input
+            type="text"
+            id="owner-input"
+            class="input-field"
+            style="margin-bottom: 0; min-height: 44px; flex: 1;"
+            placeholder="Escribe como Dueño..."
+            autocomplete="off"
+            required
+          />
+          <button type="submit" class="btn btn-success" style="width: 44px; min-width: 44px; height: 44px; padding: 0;" title="Enviar como Dueño">
+            ➤
+          </button>
+        </form>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    const SESSION_TOKEN = "{{ session.session_token }}";
+    const PET_NAME = "{{ pet.name }}";
+
+    const rescuerBox = document.getElementById("rescuer-messages");
+    const ownerBox = document.getElementById("owner-messages");
+    const rescuerInput = document.getElementById("rescuer-input");
+    const ownerInput = document.getElementById("owner-input");
+
+    const processedMsgIds = new Set();
+
+    function escapeHTML(str) {
+      if (!str) return "";
+      const div = document.createElement("div");
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    // Renderizar un mensaje en AMBOS paneles con perspectiva de rol correspondiente
+    function appendMessageToPanels(msg) {
+      if (processedMsgIds.has(msg.id)) return;
+      processedMsgIds.add(msg.id);
+
+      const timeStr = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      // 1. Perspectiva Rescatista: 'rescuer' es 'outgoing' (mío), 'owner' es 'incoming'
+      const isRescuerMine = (msg.sender === "rescuer");
+      const rescuerBubble = document.createElement("div");
+      rescuerBubble.className = isRescuerMine ? "chat-bubble bubble-outgoing" : "chat-bubble bubble-incoming";
+      rescuerBubble.innerHTML = `
+        <span class="bubble-sender">${escapeHTML(msg.sender_display_name)}</span>
+        <div class="bubble-text">${escapeHTML(msg.text)}</div>
+        <span class="bubble-time">${timeStr}</span>
+      `;
+      rescuerBox.appendChild(rescuerBubble);
+      rescuerBox.scrollTop = rescuerBox.scrollHeight;
+
+      // 2. Perspectiva Dueño: 'owner' es 'outgoing' (mío), 'rescuer' es 'incoming'
+      const isOwnerMine = (msg.sender === "owner");
+      const ownerBubble = document.createElement("div");
+      ownerBubble.className = isOwnerMine ? "chat-bubble bubble-outgoing" : "chat-bubble bubble-incoming";
+      ownerBubble.innerHTML = `
+        <span class="bubble-sender">${escapeHTML(msg.sender_display_name)}</span>
+        <div class="bubble-text">${escapeHTML(msg.text)}</div>
+        <span class="bubble-time">${timeStr}</span>
+      `;
+      ownerBox.appendChild(ownerBubble);
+      ownerBox.scrollTop = ownerBox.scrollHeight;
+    }
+
+    // Cargar mensajes iniciales si existen
+    const existingMessages = {{ session.messages | tojson }};
+    if (existingMessages && existingMessages.length > 0) {
+      existingMessages.forEach(appendMessageToPanels);
+    } else {
+      // Mensaje de bienvenida inicial
+      appendMessageToPanels({
+        id: "sys-welcome",
+        sender: "owner",
+        sender_display_name: "Sistema PetCode",
+        text: "Sala de rescate segura inicializada. No se comparten números personales ni direcciones.",
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Conectar al canal SSE en tiempo real
+    function connectSSE() {
+      const sse = new EventSource(`/api/v1/chat/${SESSION_TOKEN}/stream`);
+      sse.addEventListener("message", function(e) {
+        try {
+          const msg = JSON.parse(e.data);
+          appendMessageToPanels(msg);
+        } catch(err) {
+          console.error("Error parseando SSE:", err);
+        }
+      });
+      sse.onerror = function() {
+        console.warn("Reconectando SSE...");
+      };
+    }
+    connectSSE();
+
+    // Enviar mensaje a la API
+    async function sendMessage(sender, text) {
+      if (!text || !text.trim()) return;
+      try {
+        const resp = await fetch("/api/v1/chat/messages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            session_token: SESSION_TOKEN,
+            sender: sender,
+            text: text.trim()
+          })
+        });
+        if (!resp.ok) throw new Error("Error enviando mensaje");
+      } catch(err) {
+        console.error("Error:", err);
+      }
+    }
+
+    function handleRescuerSubmit(e) {
+      e.preventDefault();
+      const val = rescuerInput.value;
+      rescuerInput.value = "";
+      sendMessage("rescuer", val);
+    }
+
+    function handleOwnerSubmit(e) {
+      e.preventDefault();
+      const val = ownerInput.value;
+      ownerInput.value = "";
+      sendMessage("owner", val);
+    }
+
+    function sendRescuerMsg(txt) {
+      sendMessage("rescuer", txt);
+    }
+
+    function sendOwnerMsg(txt) {
+      sendMessage("owner", txt);
+    }
+  </script>
+</body>
+</html>
+

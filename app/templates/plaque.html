@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Placa Inteligente QR — {{ pet.name }} ({{ pet.token }})</title>
+  <link rel="icon" type="image/svg+xml" href="/static/img/logo.svg">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <style>
+    .plaque-wrapper {
+      max-width: 600px;
+      margin: 30px auto;
+      text-align: center;
+    }
+    .plaque-card {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      color: #ffffff;
+      border-radius: 24px;
+      padding: 36px 28px;
+      box-shadow: 0 20px 40px rgba(15, 23, 42, 0.25);
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+    .plaque-badge {
+      display: inline-block;
+      background: rgba(37, 99, 235, 0.25);
+      color: #60a5fa;
+      border: 1px solid rgba(96, 165, 250, 0.3);
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+    }
+    .plaque-qr-box {
+      background: #ffffff;
+      padding: 16px;
+      border-radius: 16px;
+      display: inline-block;
+      margin: 16px 0;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    }
+    .plaque-qr-box img {
+      display: block;
+      width: 180px;
+      height: 180px;
+    }
+    .plaque-instructions {
+      font-size: 0.95rem;
+      color: #cbd5e1;
+      margin-top: 12px;
+      line-height: 1.5;
+    }
+    .plaque-token {
+      font-family: monospace;
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: 2px;
+      color: #38bdf8;
+      margin-top: 8px;
+    }
+    .print-actions {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 20px;
+    }
+    @media print {
+      body {
+        background: #ffffff !important;
+      }
+      .header, .print-actions, .no-print {
+        display: none !important;
+      }
+      .plaque-wrapper {
+        margin: 0 auto;
+      }
+      .plaque-card {
+        border: 2px solid #0f172a;
+        box-shadow: none;
+        color: #0f172a;
+        background: #ffffff;
+      }
+      .plaque-badge {
+        border: 1px solid #0f172a;
+        color: #0f172a;
+      }
+      .plaque-instructions {
+        color: #334155;
+      }
+      .plaque-token {
+        color: #0f172a;
+      }
+    }
+  </style>
+</head>
+<body style="background: #f8fafc;">
+  <header class="header no-print">
+    <a href="/dashboard?token={{ pet.token }}" class="brand">
+      <img src="/static/img/logo.svg" alt="PetCode Logo" class="brand-icon">
+      <span>Volver al Dashboard</span>
+    </a>
+    <a href="/q/{{ pet.token }}" class="btn" style="min-height: 40px; width: auto; padding: 6px 14px; font-size: 0.82rem; background: var(--color-surface); border: 1px solid var(--color-border);" target="_blank">
+      Probar Escaneo
+    </a>
+  </header>
+
+  <main class="container">
+    <div class="plaque-wrapper">
+      <div class="plaque-card">
+        <span class="plaque-badge">🛡️ PetCode Smart Rescue Tag</span>
+        <h1 style="font-size: 1.85rem; font-weight: 800; margin: 4px 0;">{{ pet.name }}</h1>
+        <p style="font-size: 0.9rem; color: #94a3b8; margin: 0;">{{ pet.species }} · {{ pet.breed }}</p>
+
+        <!-- QR Code apuntando a /q/{token} -->
+        <div class="plaque-qr-box">
+          <img
+            src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=4&data={{ qr_url }}"
+            alt="Código QR de Rescate de {{ pet.name }}"
+            onerror="this.src='/static/img/logo.svg'"
+          >
+        </div>
+
+        <div class="plaque-token">{{ pet.token }}</div>
+        
+        <p class="plaque-instructions">
+          📱 <strong>¿Me encontraste perdido?</strong><br>
+          Escanea este código QR con la cámara de tu celular.<br>
+          Envía tu ubicación al dueño en 1 clic o chatea anónimamente sin dar tu número.
+        </p>
+
+        {% if pet.medical_notes and pet.medical_notes != "Ninguna" %}
+          <div style="margin-top: 16px; padding: 10px 14px; background: rgba(220, 38, 38, 0.2); border: 1px solid rgba(248, 113, 113, 0.4); border-radius: 12px; font-size: 0.85rem; color: #fca5a5;">
+            ⚠️ <strong>ALERTA MÉDICA:</strong> {{ pet.medical_notes }}
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="print-actions">
+        <button type="button" class="btn btn-primary" onclick="window.print()" style="min-height: 48px; width: auto; padding: 10px 24px;">
+          🖨️ Imprimir Placa para Collar
+        </button>
+        <a href="/q/{{ pet.token }}" class="btn" style="min-height: 48px; width: auto; padding: 10px 24px; background: var(--color-surface); border: 1px solid var(--color-border);" target="_blank">
+          🌐 Ver Ficha Web
+        </a>
+      </div>
+    </div>
+  </main>
+</body>
+</html>
+

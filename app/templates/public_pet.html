@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>PetCode — Rescate de {{ pet.name }}</title>
+  <link rel="icon" type="image/svg+xml" href="/static/img/logo.svg">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <!-- Header Minimalista y Seguro -->
+  <header class="header">
+    <a href="/q/{{ pet.token }}" class="brand">
+      <img src="/static/img/logo.svg" alt="PetCode Logo" class="brand-icon">
+      <span>PetCode</span>
+    </a>
+    <span style="font-size: 0.8rem; color: var(--color-text-muted); font-weight: 600;">Placa: {{ pet.token }}</span>
+  </header>
+
+  <main class="container">
+    <div class="card" style="text-align: center;">
+      <!-- Estado de la Mascota -->
+      <div style="margin-bottom: 12px;">
+        {% if pet.status.value == "LOST" %}
+          <div class="badge-lost" id="pet-status-badge">
+            <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#dc2626;"></span>
+            🚨 MODO MASCOTA PERDIDA
+          </div>
+        {% else %}
+          <div class="badge-home" id="pet-status-badge">
+            <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#16a34a;"></span>
+            🏠 EN CASA — Mascota Segura
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Fotografía de la Mascota -->
+      <div class="pet-photo-wrapper">
+        <img src="{{ pet.photo_url }}" alt="{{ pet.name }}" class="pet-photo">
+      </div>
+
+      <!-- Nombre y Especie -->
+      <h1 class="pet-title">{{ pet.name }}</h1>
+      <p class="pet-subtitle">{{ pet.species }} · {{ pet.breed }} · {{ pet.owner_masked_name }}</p>
+
+      <!-- Badge de Advertencia Médica Destacada (RF-RES-01 CA2) -->
+      {% if pet.medical_notes and pet.medical_notes.lower() != "ninguna" %}
+      <div class="medical-alert-box" role="alert">
+        <span style="font-size: 1.5rem;" aria-hidden="true">⚠️</span>
+        <div style="text-align: left;">
+          <strong>Atención Médica Crítica</strong>
+          <p>{{ pet.medical_notes }}</p>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Pantalla de Confirmación de Envío Satelital (Oculta por defecto) -->
+      <div id="express-success-panel" class="success-banner" style="display: none;">
+        <span style="font-size: 2rem;">✅</span>
+        <h2 style="font-size: 1.15rem; font-weight: 800; margin: 6px 0;">¡Ubicación Notificada al Dueño!</h2>
+        <p style="font-size: 0.9rem; margin-bottom: 12px;" id="success-desc">
+          Las coordenadas satelitales han sido transmitidas inmediatamente. Puedes retirarte con total tranquilidad o abrir un chat si lo deseas.
+        </p>
+        <button type="button" class="btn btn-outline" id="btn-open-chat-after-success" style="min-height: 48px;">
+          💬 Abrir Chat Web Seguro
+        </button>
+      </div>
+
+      <!-- Panel Principal de Acción (Modo Express 3s) -->
+      <div id="action-panel" style="margin-top: 16px;">
+        <p style="font-size: 0.9rem; color: var(--color-text-muted); margin-bottom: 12px;">
+          ¿Tienes a esta mascota contigo? Ayúdala a regresar a casa en un clic:
+        </p>
+
+        <!-- Botón Express 3s: GPS Directo -->
+        <button type="button" class="btn btn-danger" id="btn-express-gps" style="margin-bottom: 12px;">
+          <span style="font-size: 1.25rem;">📍</span>
+          <span>Enviar mi ubicación satelital al dueño y retirarme</span>
+        </button>
+
+        <div id="gps-loading" style="display: none; padding: 10px; font-weight: 600; color: var(--color-primary);">
+          📡 Obteniendo coordenadas satelitales precisas...
+        </div>
+
+        <!-- Botón Directo para Iniciar Chat Web Seguro -->
+        <button type="button" class="btn btn-secondary" id="btn-start-chat-direct">
+          <span>💬</span>
+          <span>Iniciar Chat Web Seguro con el Dueño</span>
+        </button>
+      </div>
+
+      <!-- Panel de Degradación Grácil ante Denegación/Fallo de GPS (RF-RES-02 CA2) -->
+      <div id="fallback-panel" class="contingency-box" style="display: none;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; color: #b45309;">
+          <span style="font-size: 1.2rem;">ℹ️</span>
+          <strong style="font-size: 0.95rem;">Geolocalización satelital no disponible</strong>
+        </div>
+        <p style="font-size: 0.88rem; color: var(--color-text-muted); margin-bottom: 12px; text-align: left;">
+          No te preocupes. Puedes indicarle al dueño en qué barrio o calle viste a {{ pet.name }}, o iniciar un chat seguro y 100% anónimo:
+        </p>
+
+        <form id="manual-location-form">
+          <input
+            type="text"
+            id="manual-address-input"
+            class="input-field"
+            placeholder="Ej: Carrera 15 con Calle 127, Parque El Virrey"
+            aria-label="Dirección o punto de referencia"
+            required
+          />
+          <button type="submit" class="btn btn-primary" id="btn-submit-manual">
+            <span>📍</span>
+            <span>Enviar dirección manual al dueño</span>
+          </button>
+        </form>
+
+        <div style="margin-top: 12px; border-top: 1px solid var(--color-border); padding-top: 12px;">
+          <button type="button" class="btn btn-secondary" id="btn-fallback-chat">
+            <span>💬</span>
+            <span>Abrir Chat Anónimo con el Dueño</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Nota de Privacidad Cero Doxxing -->
+      <p style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: 18px;">
+        🔒 <strong>Privacidad PetCode:</strong> Tus datos de identidad jamás son solicitados ni expuestos. Comunicación 100% cifrada y anónima.
+      </p>
+    </div>
+  </main>
+
+  <script>
+    // Variables seguras de plantilla (Sin PII)
+    const PET_TOKEN = "{{ pet.token }}";
+    const PET_NAME = "{{ pet.name }}";
+
+    const btnExpressGps = document.getElementById("btn-express-gps");
+    const gpsLoading = document.getElementById("gps-loading");
+    const actionPanel = document.getElementById("action-panel");
+    const fallbackPanel = document.getElementById("fallback-panel");
+    const successPanel = document.getElementById("express-success-panel");
+    const successDesc = document.getElementById("success-desc");
+    const btnStartChatDirect = document.getElementById("btn-start-chat-direct");
+    const btnFallbackChat = document.getElementById("btn-fallback-chat");
+    const btnOpenChatAfterSuccess = document.getElementById("btn-open-chat-after-success");
+    const manualForm = document.getElementById("manual-location-form");
+    const manualInput = document.getElementById("manual-address-input");
+
+    // Función para activar sesión de chat e ir a la URL de chat
+    async function openChatSession() {
+      try {
+        const res = await fetch("/api/v1/chat/sessions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pet_token: PET_TOKEN })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          window.location.href = `/chat/${data.session_token}?role=rescuer`;
+        } else {
+          // Si hubo error, redirigir al dashboard o reintentar
+          alert("No se pudo iniciar el chat en este momento.");
+        }
+      } catch (err) {
+        // Fallback silencioso sin uncaught exceptions
+        console.warn("Chat session creation error:", err);
+      }
+    }
+
+    btnStartChatDirect.addEventListener("click", openChatSession);
+    btnFallbackChat.addEventListener("click", openChatSession);
+    btnOpenChatAfterSuccess.addEventListener("click", openChatSession);
+
+    // Modo Express 3s (RF-RES-02 CA1)
+    btnExpressGps.addEventListener("click", function() {
+      if (!navigator.geolocation) {
+        triggerGracefulDegradation("Geolocalización no soportada por el navegador");
+        return;
+      }
+
+      btnExpressGps.disabled = true;
+      gpsLoading.style.display = "block";
+
+      const geoOptions = {
+        enableHighAccuracy: true,
+        timeout: 4000,
+        maximumAge: 0
+      };
+
+      navigator.geolocation.getCurrentPosition(
+        // Éxito GPS
+        async function(position) {
+          try {
+            const payload = {
+              token: PET_TOKEN,
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+              accuracy: position.coords.accuracy,
+              timestamp: new Date().toISOString()
+            };
+
+            const response = await fetch("/api/v1/scans", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload)
+            });
+
+            gpsLoading.style.display = "none";
+
+            if (response.ok) {
+              const resData = await response.json();
+              actionPanel.style.display = "none";
+              fallbackPanel.style.display = "none";
+              successPanel.style.display = "block";
+              successDesc.textContent = resData.message || "Tu ubicación satelital ha sido transmitida exitosamente al dueño.";
+            } else if (response.status === 429) {
+              const err = await response.json();
+              alert(err.detail ? (err.detail.message || "Límite de solicitudes alcanzado") : "Demasiadas solicitudes.");
+              btnExpressGps.disabled = false;
+            } else {
+              triggerGracefulDegradation("Error en el servidor al enviar escaneo");
+            }
+          } catch (e) {
+            triggerGracefulDegradation("Error de red");
+          }
+        },
+        // Error de GPS (Denegación, timeout o indisponible) -> RF-RES-02 CA2
+        function(geoError) {
+          // INTERCEPTAR SIN LANZAR EXCEPCIONES EN CONSOLA NI MODALES INVASIVOS
+          // Transición inmediata (< 200ms) al modo de degradación grácil
+          gpsLoading.style.display = "none";
+          triggerGracefulDegradation(geoError.message);
+        },
+        geoOptions
+      );
+    });
+
+    // Degradación Grácil (< 200ms)
+    function triggerGracefulDegradation(reason) {
+      btnExpressGps.disabled = false;
+      gpsLoading.style.display = "none";
+      // Despliega fluidamente el panel de contingencia
+      fallbackPanel.style.display = "block";
+      fallbackPanel.style.opacity = "0";
+      setTimeout(() => { fallbackPanel.style.opacity = "1"; manualInput.focus(); }, 50);
+    }
+
+    // Envío Manual de Dirección
+    manualForm.addEventListener("submit", async function(e) {
+      e.preventDefault();
+      const address = manualInput.value.trim();
+      if (!address) return;
+
+      const btnSubmit = document.getElementById("btn-submit-manual");
+      btnSubmit.disabled = true;
+
+      try {
+        const payload = {
+          token: PET_TOKEN,
+          manual_address: address,
+          timestamp: new Date().toISOString()
+        };
+
+        const res = await fetch("/api/v1/scans", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          actionPanel.style.display = "none";
+          fallbackPanel.style.display = "none";
+          successPanel.style.display = "block";
+          successDesc.textContent = `La dirección manual "${address}" ha sido enviada al dueño de ${PET_NAME}.`;
+        } else if (res.status === 429) {
+          const err = await res.json();
+          alert(err.detail ? (err.detail.message || "Límite de solicitudes alcanzado") : "Demasiadas solicitudes.");
+          btnSubmit.disabled = false;
+        } else {
+          alert("Ocurrió un error al enviar la dirección. Intenta de nuevo.");
+          btnSubmit.disabled = false;
+        }
+      } catch (err) {
+        alert("Error de conexión al enviar.");
+        btnSubmit.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

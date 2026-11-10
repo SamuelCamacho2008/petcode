@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PetCode — Registro de Mascota y Propietario</title>
+  <link rel="icon" type="image/svg+xml" href="/static/img/logo.svg">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <style>
+    .step-card {
+      background: #ffffff;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow-sm);
+    }
+    .step-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .step-number {
+      width: 32px;
+      height: 32px;
+      background: var(--color-primary);
+      color: #ffffff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 0.95rem;
+    }
+    .step-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin: 0;
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 640px) {
+      .form-row {
+        grid-template-columns: 1fr;
+        gap: 0;
+      }
+    }
+    .avatar-picker {
+      display: flex;
+      gap: 14px;
+      margin-top: 8px;
+      margin-bottom: 16px;
+    }
+    .avatar-option {
+      cursor: pointer;
+      border: 3px solid var(--color-border);
+      border-radius: 50%;
+      width: 64px;
+      height: 64px;
+      overflow: hidden;
+      transition: all 0.2s ease;
+    }
+    .avatar-option.selected {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.3);
+    }
+    .avatar-option img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  </style>
+</head>
+<body style="background: #f8fafc;">
+  <header class="header">
+    <a href="/" class="brand">
+      <img src="/static/img/logo.svg" alt="PetCode Logo" class="brand-icon">
+      <span>PetCode</span>
+    </a>
+    <div style="display: flex; gap: 8px;">
+      <a href="/dashboard" class="btn" style="min-height: 40px; width: auto; padding: 6px 14px; font-size: 0.85rem; background: var(--color-surface); border: 1px solid var(--color-border);">
+        Ir al Dashboard
+      </a>
+    </div>
+  </header>
+
+  <main class="container" style="max-width: 760px; padding-top: 24px; padding-bottom: 40px;">
+    <!-- Banner de Bienvenida -->
+    <div style="text-align: center; margin-bottom: 24px;">
+      <div style="font-size: 2.5rem; margin-bottom: 8px;">🐾</div>
+      <h1 style="font-size: 1.85rem; font-weight: 800; color: #0f172a; margin-bottom: 6px;">
+        Registra tu Mascota en PetCode
+      </h1>
+      <p style="font-size: 0.95rem; color: var(--color-text-muted); max-width: 580px; margin: 0 auto;">
+        Crea tu placa inteligente con código QR. Si tu mascota se extravía, quien la encuentre podrá enviarte su ubicación satelital en 1 clic o chatear contigo en tiempo real de forma 100% anónima.
+      </p>
+    </div>
+
+    <!-- Formulario de Registro -->
+    <form id="register-form">
+      <!-- Paso 1: ¿Quién eres tú? -->
+      <div class="step-card">
+        <div class="step-header">
+          <div class="step-number">1</div>
+          <h2 class="step-title">¿Quién eres tú? (Datos del Propietario)</h2>
+        </div>
+        <p style="font-size: 0.82rem; color: #2563eb; background: #eff6ff; padding: 8px 12px; border-radius: 8px; margin-bottom: 16px;">
+          🛡️ <strong>Privacidad Cero Doxxing:</strong> Tu teléfono y dirección física <strong>NUNCA</strong> serán visibles para extraños en internet ni en la placa QR. Solo se usan para notificarte a ti internamente.
+        </p>
+
+        <div class="form-row">
+          <div>
+            <label for="owner_name" style="display: block; font-size: 0.88rem; font-weight: 600; margin-bottom: 6px;">Tu Nombre o Alias *</label>
+            <input type="text" id="owner_name" class="input-field" placeholder="Ej: Samuel Pérez" required />
+          </div>
+          <div>
+            <label for="owner_phone" style="display: block; font-size: 0.88rem; font-weight: 600; margin-bottom: 6px;">Tu Celular de Contacto *</label>
+            <input type="tel" id="owner_phone" class="input-field" placeholder="Ej: +57 300 123 4567" required />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div>
+            <label for="owner_email" style="display: block; font-size: 0.88rem; font-weight: 600; margin-bottom: 6px;">Tu Correo Electrónico</label>
+            <input type="email" id="owner_email" class="input-field" placeholder="Ej: samuel@correo.com" />
+          </div>
+          <div>
+            <label for="owner_address" style="display: block; font-size: 0.88rem; font-weight: 600; margin-bottom: 6px;">Dirección / Barrio (Confidencial)</label>
+            <input type="text" id="owner_address" class="input-field" placeholder="Ej: Calle 100 #15-20, Bogotá" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Paso 2: Datos de tu Mascota -->
+      <div class="step-card">
+        <div class="step-header">
+          <div class="step-number">2</div>
+          <h2 class="step-title">Datos de tu Mascota</h2>
+        </div>
+
+        <div class="form-row">
+          <div>
+            <label for="pet_name" style="display: block; font-size: 0.88rem; font-weight: 600; margin-bottom: 6px;">Nombre de la Mascota *</label>
+            <input type="text" id="pet_name" class="input-field" placeholder="Ej: Toby, Rocky, Luna" required />
+          </div>
+          <div>
+            <label for="species" style="display: block; font-size: 0.88rem; font-weight: 600; margin-bottom: 6px;">Especie *</label>
+            <select id="species" class="input-field">
+              <option value="Perro" selected>🐶 Perro</option>
+              <option value="Gato">🐱 Gato</option>
+              <option value="Conejo">🐰 Conejo</option>
+              <option value="Ave">🦜 Ave</option>
+              <option value="Otro">🐾 Otro</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div>
+            <label for="breed" style="display: block; font-size: 0.88rem; font-weight: 600; margin-bottom: 6px;">Raza *</label>
+            <input type="text" id="breed" class="input-field" placeholder="Ej: Criollo, Golden, Siamés" value="Mestizo / Criollo" required />
+          </div>
+          <div>
+            <label for="initial_status" style="display: block; font-size: 0.88rem; font-weight: 600; margin-bottom: 6px;">Estado Actual de la Mascota</label>
+            <select id="initial_status" class="input-field">
+              <option value="AT_HOME" selected>🏠 En Casa (Protegida)</option>
+              <option value="LOST">🚨 Perdida (Alerta de Rescate Activa)</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label style="display: block; font-size: 0.88rem; font-weight: 600; margin-bottom: 4px;">Elige un Avatar para su Ficha:</label>
+          <div class="avatar-picker">
+            <div class="avatar-option selected" data-photo="/static/img/luna.svg" onclick="selectAvatar(this)">
+              <img src="/static/img/luna.svg" alt="Avatar Perro">
+            </div>
+            <div class="avatar-option" data-photo="/static/img/max.svg" onclick="selectAvatar(this)">
+              <img src="/static/img/max.svg" alt="Avatar Gato">
+            </div>
+            <div class="avatar-option" data-photo="/static/img/logo.svg" onclick="selectAvatar(this)">
+              <img src="/static/img/logo.svg" alt="Avatar Placa">
+            </div>
+          </div>
+          <input type="hidden" id="photo_url" value="/static/img/luna.svg">
+        </div>
+
+        <div>
+          <label for="medical_notes" style="display: block; font-size: 0.88rem; font-weight: 600; margin-bottom: 6px;">
+            ⚠️ Advertencias Médicas o Cuidados Especiales (Opcional)
+          </label>
+          <input
+            type="text"
+            id="medical_notes"
+            class="input-field"
+            placeholder="Ej: Alérgico al pollo / Requiere medicina diaria / Es asustadizo"
+          />
+          <span style="font-size: 0.78rem; color: var(--color-text-muted);">
+            Esta advertencia aparecerá en grande en la ficha pública para que quien lo encuentre sepa cómo cuidarlo.
+          </span>
+        </div>
+      </div>
+
+      <!-- Botón de Registro -->
+      <button type="submit" class="btn btn-primary" id="btn-submit-register" style="min-height: 54px; font-size: 1.1rem; font-weight: 700; width: 100%;">
+        🚀 Registrar Mascota y Generar Placa Inteligente
+      </button>
+    </form>
+
+    <!-- Acceso Rápido a Mascotas de Ejemplo -->
+    <div style="margin-top: 36px; padding: 20px; background: #ffffff; border: 1px dashed var(--color-border); border-radius: 16px; text-align: center;">
+      <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 8px;">¿O deseas explorar las mascotas de demostración ya registradas?</h3>
+      <div style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin-top: 12px;">
+        <a href="/dashboard?token=LUNA-COL-99" class="btn btn-danger" style="min-height: 44px; width: auto; padding: 8px 18px; font-size: 0.88rem;">
+          🐶 Luna (Mascota Perdida)
+        </a>
+        <a href="/dashboard?token=MAX-COL-42" class="btn btn-success" style="min-height: 44px; width: auto; padding: 8px 18px; font-size: 0.88rem;">
+          🐱 Max (En Casa)
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    let selectedPhoto = "/static/img/luna.svg";
+
+    function selectAvatar(el) {
+      document.querySelectorAll(".avatar-option").forEach(opt => opt.classList.remove("selected"));
+      el.classList.add("selected");
+      selectedPhoto = el.getAttribute("data-photo");
+      document.getElementById("photo_url").value = selectedPhoto;
+    }
+
+    document.getElementById("register-form").addEventListener("submit", async function(e) {
+      e.preventDefault();
+      const btn = document.getElementById("btn-submit-register");
+      btn.disabled = true;
+      btn.textContent = "⏳ Registrando y generando placa...";
+
+      const payload = {
+        owner_name: document.getElementById("owner_name").value.trim(),
+        owner_phone: document.getElementById("owner_phone").value.trim(),
+        owner_email: document.getElementById("owner_email").value.trim(),
+        owner_address: document.getElementById("owner_address").value.trim(),
+        pet_name: document.getElementById("pet_name").value.trim(),
+        species: document.getElementById("species").value,
+        breed: document.getElementById("breed").value.trim() || "Mestizo",
+        status: document.getElementById("initial_status").value,
+        photo_url: selectedPhoto,
+        medical_notes: document.getElementById("medical_notes").value.trim() || "Ninguna"
+      };
+
+      try {
+        const resp = await fetch("/api/v1/pets/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        if (!resp.ok) {
+          throw new Error("Error en el servidor al registrar mascota");
+        }
+
+        const newPet = await resp.json();
+        // Redirigir al Dashboard de la nueva mascota
+        window.location.href = `/dashboard?token=${newPet.token}&registered=1`;
+      } catch (err) {
+        alert("Hubo un error al registrar: " + err.message);
+        btn.disabled = false;
+        btn.textContent = "🚀 Registrar Mascota y Generar Placa Inteligente";
+      }
+    });
+  </script>
+</body>
+</html>
+

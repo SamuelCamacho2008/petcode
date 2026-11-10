@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>PetCode — Chat Seguro de Rescate ({{ session.pet_name }})</title>
+  <link rel="icon" type="image/svg+xml" href="/static/img/logo.svg">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body style="background: #f1f5f9;">
+  <header class="header">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <a href="/q/{{ session.pet_token }}" style="text-decoration: none; font-size: 1.25rem;">←</a>
+      <div>
+        <h1 style="font-size: 1rem; font-weight: 800; line-height: 1.2;">
+          Rescate de {{ session.pet_name }}
+        </h1>
+        <p style="font-size: 0.75rem; color: var(--color-text-muted);">
+          Sala Anónima · 
+          {% if current_role == 'rescuer' %}
+            Tú: <strong>{{ session.rescuer_alias }}</strong>
+          {% else %}
+            Tú: <strong>{{ session.owner_alias }}</strong>
+          {% endif %}
+        </p>
+      </div>
+    </div>
+    <div id="connection-status" style="font-size: 0.75rem; font-weight: 700; color: #16a34a; display: flex; align-items: center; gap: 4px;">
+      <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#16a34a;"></span>
+      En vivo
+    </div>
+  </header>
+
+  <main class="container" style="padding-top: 8px; padding-bottom: 8px;">
+    <div class="chat-window">
+      <!-- Mensaje informativo de privacidad enmascarada -->
+      <div style="background: #eff6ff; border-bottom: 1px solid #bfdbfe; padding: 8px 12px; font-size: 0.78rem; color: #1e40af; text-align: center;">
+        🛡️ <strong>Canal Efímero y Protegido:</strong> No expone números de teléfono ni datos personales de ninguna de las partes.
+      </div>
+
+      <!-- Área de Mensajes -->
+      <div class="chat-messages" id="messages-container">
+        <!-- Renderizado dinámico vía JS -->
+      </div>
+
+      <!-- Barra de Entrada y Acciones Rápidas -->
+      <form id="chat-form" class="chat-input-bar">
+        <!-- Input de Foto Oculto -->
+        <input type="file" id="photo-input" accept="image/*" style="display: none;">
+        
+        <!-- Botón Cámara / Adjuntar Foto (< 1.5MB) -->
+        <button type="button" class="chat-btn-action" id="btn-attach-photo" title="Adjuntar foto de la mascota" aria-label="Adjuntar foto de la mascota">
+          📷
+        </button>
+
+        <!-- Botón Compartir Coordenadas -->
+        <button type="button" class="chat-btn-action" id="btn-share-coords" title="Compartir mi ubicación actual" aria-label="Compartir mi ubicación actual">
+          📍
+        </button>
+
+        <!-- Input de Texto -->
+        <input
+          type="text"
+          id="message-input"
+          class="input-field"
+          style="margin-bottom: 0; min-height: 48px; flex: 1;"
+          placeholder="Escribe un mensaje seguro..."
+          autocomplete="off"
+          required
+        />
+
+        <!-- Botón Enviar -->
+        <button type="submit" class="btn btn-primary" id="btn-send-msg" style="width: 48px; min-width: 48px; height: 48px; padding: 0;" aria-label="Enviar mensaje">
+          ➤
+        </button>
+      </form>
+    </div>
+  </main>
+
+  <script>
+    const SESSION_TOKEN = "{{ session_token }}";
+    const CURRENT_ROLE = "{{ current_role }}"; // "rescuer" | "owner"
+    const PET_NAME = "{{ session.pet_name }}";
+
+    const messagesContainer = document.getElementById("messages-container");
+    const chatForm = document.getElementById("chat-form");
+    const messageInput = document.getElementById("message-input");
+    const photoInput = document.getElementById("photo-input");
+    const btnAttachPhoto = document.getElementById("btn-attach-photo");
+    const btnShareCoords = document.getElementById("btn-share-coords");
+    const connectionStatus = document.getElementById("connection-status");
+
+    // Registro de IDs procesados para evitar duplicados en reconexión
+    const processedMessageIds = new Set();
+    let eventSource = null;
+
+    // 1. Sanitizador XSS estricto (RS-SEC-02 CA1)
+    function escapeHTML(str) {
+      if (!str) return "";
+      const div = document.createElement("div");
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    // 2. Renderizado Seguro de Burbuja en el Chat
+    function appendMessage(msg) {
+      if (processedMessageIds.has(msg.id)) return;
+      processedMessageIds.add(msg.id);
+
+      const isMine = (msg.sender === CURRENT_ROLE);
+      const bubble = document.createElement("div");
+      bubble.className = `msg-bubble ${isMine ? "mine" : "theirs"}`;
+
+      // Cabecera con alias enmascarado
+      const headerDiv = document.createElement("div");
+      headerDiv.style.fontSize = "0.75rem";
+      headerDiv.style.fontWeight = "700";
+      headerDiv.style.marginBottom = "4px";
+      headerDiv.style.opacity = isMine ? "0.9" : "0.7";
+      headerDiv.textContent = isMine ? "Tú" : msg.sender_display_name;
+      bubble.appendChild(headerDiv);
+
+      // Texto sanitizado
+      if (msg.text) {
+        const textDiv = document.createElement("div");
+        textDiv.textContent = msg.text; // Seguro contra inyecciones XSS
+        bubble.appendChild(textDiv);
+      }
+
+      // Fotografía adjunta (si aplica)
+      if (msg.photo_base64) {
+        const img = document.createElement("img");
+        img.src = msg.photo_base64;
+        img.alt = "Foto adjunta";
+        img.className = "msg-img";
+        img.loading = "lazy";
+        bubble.appendChild(img);
+      }
+
+      // Tarjeta de Coordenadas compartidas
+      if (msg.coords && msg.coords.lat && msg.coords.lon) {
+        const coordsBox = document.createElement("div");
+        coordsBox.style.marginTop = "6px";
+        coordsBox.style.padding = "6px 8px";
+        coordsBox.style.borderRadius = "6px";
+        coordsBox.style.background = isMine ? "rgba(255,255,255,0.2)" : "#e2e8f0";
+        coordsBox.style.fontSize = "0.8rem";
+        
+        const mapLink = `https://www.google.com/maps?q=${msg.coords.lat},${msg.coords.lon}`;
+        coordsBox.innerHTML = `📍 <strong>Ubicación compartida:</strong><br>${msg.coords.lat.toFixed(5)}, ${msg.coords.lon.toFixed(5)}<br><a href="${mapLink}" target="_blank" rel="noopener" style="color: inherit; text-decoration: underline; font-weight: bold;">Ver en Google Maps</a>`;
+        bubble.appendChild(coordsBox);
+      }
+
+      // Hora del mensaje
+      const metaDiv = document.createElement("div");
+      metaDiv.className = "msg-meta";
+      const timeStr = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "";
+      metaDiv.textContent = timeStr;
+      bubble.appendChild(metaDiv);
+
+      messagesContainer.appendChild(bubble);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    // 3. Carga Inicial de Mensajes Históricos
+    async function loadInitialMessages() {
+      try {
+        const res = await fetch(`/api/v1/chat/${SESSION_TOKEN}/messages`);
+        if (res.ok) {
+          const messages = await res.json();
+          messages.forEach(appendMessage);
+        }
+      } catch (err) {
+        console.warn("Error cargando mensajes iniciales:", err);
+      }
+    }
+
+    // 4. Conexión Server-Sent Events (SSE) con Reconexión Automática (RF-CHAT-01 CA3)
+    function setupSSE() {
+      if (eventSource) {
+        eventSource.close();
+      }
+
+      eventSource = new EventSource(`/api/v1/chat/${SESSION_TOKEN}/stream`);
+
+      eventSource.onopen = function() {
+        connectionStatus.innerHTML = '<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#16a34a;"></span> En vivo';
+        connectionStatus.style.color = "#16a34a";
+      };
+
+      eventSource.addEventListener("message", function(e) {
+        try {
+          const msg = JSON.parse(e.data);
+          appendMessage(msg);
+        } catch (err) {
+          console.error("Error procesando mensaje SSE:", err);
+        }
+      });
+
+      eventSource.addEventListener("handshake", function(e) {
+        // Handshake inicial completado
+      });
+
+      eventSource.onerror = function() {
+        // En caso de caída de red, SSE reintenta automáticamente por especificación W3C
+        connectionStatus.innerHTML = '<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#f59e0b;"></span> Reconectando...';
+        connectionStatus.style.color = "#f59e0b";
+      };
+    }
+
+    // 5. Envío de Mensaje de Texto
+    chatForm.addEventListener("submit", async function(e) {
+      e.preventDefault();
+      const text = messageInput.value.trim();
+      if (!text) return;
+
+      const payload = {
+        session_token: SESSION_TOKEN,
+        sender: CURRENT_ROLE,
+        text: text
+      };
+
+      messageInput.value = "";
+      messageInput.focus();
+
+      try {
+        const res = await fetch("/api/v1/chat/messages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          const sentMsg = await res.json();
+          appendMessage(sentMsg);
+        } else {
+          alert("Error al enviar el mensaje.");
+        }
+      } catch (err) {
+        console.error("Error enviando mensaje:", err);
+      }
+    });
+
+    // 6. Envío de Coordenadas Satelitales desde el Chat
+    btnShareCoords.addEventListener("click", function() {
+      if (!navigator.geolocation) {
+        alert("La geolocalización no está disponible en este dispositivo.");
+        return;
+      }
+
+      btnShareCoords.disabled = true;
+      navigator.geolocation.getCurrentPosition(
+        async function(pos) {
+          btnShareCoords.disabled = false;
+          const payload = {
+            session_token: SESSION_TOKEN,
+            sender: CURRENT_ROLE,
+            text: "He compartido mis coordenadas actuales:",
+            coords: {
+              lat: pos.coords.latitude,
+              lon: pos.coords.longitude,
+              accuracy: pos.coords.accuracy
+            }
+          };
+
+          try {
+            const res = await fetch("/api/v1/chat/messages", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+              const sentMsg = await res.json();
+              appendMessage(sentMsg);
+            }
+          } catch (e) {
+            console.error("Error enviando coords en chat:", e);
+          }
+        },
+        function(err) {
+          btnShareCoords.disabled = false;
+          alert("No se pudo obtener la ubicación GPS.");
+        },
+        { enableHighAccuracy: true, timeout: 5000 }
+      );
+    });
+
+    // 7. Compresión y Envío de Fotografías (< 1.5 MB) (CA4)
+    btnAttachPhoto.addEventListener("click", () => photoInput.click());
+
+    photoInput.addEventListener("change", function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const img = new Image();
+        img.onload = async function() {
+          // Comprimir mediante canvas cliente para mantener tamaño < 1.5MB
+          const canvas = document.createElement("canvas");
+          let width = img.width;
+          let height = img.height;
+          const maxDim = 1200;
+
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Calidad JPEG balanceada
+          const compressedBase64 = canvas.toDataURL("image/jpeg", 0.75);
+
+          const payload = {
+            session_token: SESSION_TOKEN,
+            sender: CURRENT_ROLE,
+            text: "Foto adjunta",
+            photo_base64: compressedBase64
+          };
+
+          try {
+            const res = await fetch("/api/v1/chat/messages", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+              const sentMsg = await res.json();
+              appendMessage(sentMsg);
+            } else {
+              alert("La foto es demasiado pesada o no pudo procesarse.");
+            }
+          } catch (err) {
+            alert("Error al enviar la imagen.");
+          }
+        };
+        img.src = evt.target.result;
+      };
+      reader.readAsDataURL(file);
+      photoInput.value = "";
+    });
+
+    // Inicializar chat
+    loadInitialMessages().then(setupSSE);
+  </script>
+</body>
+</html>

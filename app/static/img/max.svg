@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="100%" height="100%">
+  <defs>
+    <linearGradient id="catBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E0E7FF"/>
+      <stop offset="100%" stop-color="#C7D2FE"/>
+    </linearGradient>
+    <linearGradient id="catFur" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#F3F4F6"/>
+      <stop offset="100%" stop-color="#E5E7EB"/>
+    </linearGradient>
+  </defs>
+  <circle cx="150" cy="150" r="140" fill="url(#catBg)" stroke="#6366F1" stroke-width="4"/>
+  <!-- Orejas puntiagudas Siamés oscuras -->
+  <polygon points="75,130 90,50 135,110" fill="#374151"/>
+  <polygon points="85,125 96,65 125,110" fill="#F472B6"/>
+  <polygon points="225,130 210,50 165,110" fill="#374151"/>
+  <polygon points="215,125 204,65 175,110" fill="#F472B6"/>
+  <!-- Cabeza gato -->
+  <ellipse cx="150" cy="160" rx="72" ry="60" fill="url(#catFur)"/>
+  <!-- Máscara facial Siamés -->
+  <path d="M 115,130 Q 150,110 185,130 Q 195,175 150,195 Q 105,175 115,130 Z" fill="#4B5563" opacity="0.9"/>
+  <!-- Ojos azules intensos -->
+  <ellipse cx="125" cy="145" rx="12" ry="9" fill="#0EA5E9"/>
+  <ellipse cx="125" cy="145" rx="4" ry="8" fill="#111827"/>
+  <circle cx="123" cy="142" r="2.5" fill="#FFFFFF"/>
+  <ellipse cx="175" cy="145" rx="12" ry="9" fill="#0EA5E9"/>
+  <ellipse cx="175" cy="145" rx="4" ry="8" fill="#111827"/>
+  <circle cx="173" cy="142" r="2.5" fill="#FFFFFF"/>
+  <!-- Nariz rosa oscura -->
+  <polygon points="150,165 144,173 156,173" fill="#EC4899"/>
+  <path d="M 150,173 L 150,182 M 140,180 Q 150,188 160,180" stroke="#1F2937" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+  <!-- Bigotes -->
+  <line x1="85" y1="168" x2="130" y2="173" stroke="#9CA3AF" stroke-width="2"/>
+  <line x1="85" y1="180" x2="130" y2="180" stroke="#9CA3AF" stroke-width="2"/>
+  <line x1="215" y1="168" x2="170" y2="173" stroke="#9CA3AF" stroke-width="2"/>
+  <line x1="215" y1="180" x2="170" y2="180" stroke="#9CA3AF" stroke-width="2"/>
+  <!-- Collar -->
+  <path d="M 110,210 Q 150,225 190,210" stroke="#10B981" stroke-width="8" stroke-linecap="round" fill="none"/>
+  <circle cx="150" cy="226" r="10" fill="#FBBF24"/>
+</svg>
