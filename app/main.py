@@ -12,7 +12,9 @@ from app.routers import (
     api_pets,
     api_scans,
     api_chat,
-    api_dashboard
+    api_dashboard,
+    api_account,
+    api_payments
 )
 
 # Worker en hilo daemon para no interferir con AnyIO ni con TestClient
@@ -58,6 +60,8 @@ app.include_router(api_pets.router)
 app.include_router(api_scans.router)
 app.include_router(api_chat.router)
 app.include_router(api_dashboard.router)
+app.include_router(api_account.router)
+app.include_router(api_payments.router)
 
 if __name__ == "__main__":
     import uvicorn

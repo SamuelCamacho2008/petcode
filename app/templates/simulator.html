@@ -95,6 +95,43 @@
       </div>
     </div>
 
+    <!-- Tarjeta de Recompensa y Liquidación (5% PetCode / 95% Rescatista) -->
+    <div style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 1.5px solid #fde68a; border-radius: 16px; padding: 16px 20px; margin-top: 14px; box-shadow: var(--shadow-sm); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;">
+      <div style="display: flex; align-items: center; gap: 14px;">
+        <div style="font-size: 2rem;">💰</div>
+        <div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <strong style="color: #92400e; font-size: 0.95rem;">Custodia de Recompensa (Escrow):</strong>
+            <span style="font-size: 1.25rem; font-weight: 900; color: #78350f;">${{ "{:,.0f}".format(pet.reward_amount) }} COP</span>
+            <span id="sim-payment-status" style="background: #fde68a; color: #92400e; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 700;">
+              {% if payment and payment.status.value == 'RELEASED' %}✅ Liquidado{% else %}⏳ En Custodia{% endif %}
+            </span>
+          </div>
+          <div style="font-size: 0.82rem; color: #b45309; margin-top: 2px;">
+            🤝 <strong>95% para Rescatista:</strong> ${{ "{:,.0f}".format(pet.reward_amount * 0.95) }} COP · 
+            📈 <strong>5% Comisión PetCode:</strong> ${{ "{:,.0f}".format(pet.reward_amount * 0.05) }} COP
+          </div>
+        </div>
+      </div>
+
+      <div id="sim-reward-actions" style="display: flex; align-items: center; gap: 10px;">
+        {% if payment and payment.status.value == 'RELEASED' %}
+          <div style="background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; padding: 8px 16px; border-radius: 10px; font-weight: 800; font-size: 0.85rem;">
+            ✅ Recompensa Entregada Exitosamente
+          </div>
+        {% else %}
+          <button type="button" class="btn btn-success" id="btn-sim-release" onclick="releaseRewardSimulator()" style="min-height: 42px; padding: 8px 18px; font-size: 0.85rem; width: auto; font-weight: 800; box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.3);">
+            💸 Dueño: Confirmar Entrega y Liberar Recompensa
+          </button>
+        {% endif %}
+        {% if is_admin %}
+          <a href="/admin" class="btn" style="min-height: 42px; width: auto; padding: 8px 14px; font-size: 0.82rem; background: #ffffff; border: 1px solid #cbd5e1; color: #b45309; font-weight: 700;">
+            👑 Ver Finanzas Admin
+          </a>
+        {% endif %}
+      </div>
+    </div>
+
     <!-- Contenedor Dividido: Rescatista vs Dueño -->
     <div class="simulator-container">
       
@@ -332,6 +369,47 @@
 
     function sendOwnerMsg(txt) {
       sendMessage("owner", txt);
+    }
+
+    async function releaseRewardSimulator() {
+      const confirmRelease = confirm(
+        `¿Confirmas que el rescatista te entregó a ${PET_NAME} y deseas liberar la recompensa?\n\n` +
+        `• 95% para Rescatista: ${{ "{:,.0f}".format(pet.reward_amount * 0.95) }} COP\n` +
+        `• 5% Comisión Técnica PetCode: ${{ "{:,.0f}".format(pet.reward_amount * 0.05) }} COP`
+      );
+      if (!confirmRelease) return;
+
+      try {
+        const res = await fetch("/api/v1/payments/release", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            session_token: SESSION_TOKEN,
+            rescuer_alias: "Rescatista"
+          })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const actions = document.getElementById("sim-reward-actions");
+          if (actions) {
+            actions.innerHTML = `<div style="background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; padding: 8px 16px; border-radius: 10px; font-weight: 800; font-size: 0.85rem;">✅ Recompensa Entregada Exitosamente</div>`;
+          }
+          const statusBadge = document.getElementById("sim-payment-status");
+          if (statusBadge) {
+            statusBadge.textContent = "✅ Liquidado";
+            statusBadge.style.background = "#d1fae5";
+            statusBadge.style.color = "#065f46";
+          }
+          await sendMessage("owner", `🎉 ¡Acabo de verificar la entrega y liberar tu recompensa de $${Number(data.payment.total_reward).toLocaleString()} COP! Muchas gracias por cuidar a ${PET_NAME}.`);
+          alert(`🎉 ¡Excelente! La recompensa ha sido liberada con éxito.\n\n• Rescatista recibió: $${Number(data.payment.rescuer_payout).toLocaleString()} COP (95%)\n• PetCode generó: $${Number(data.payment.platform_fee).toLocaleString()} COP (5% de ganancia operativa)`);
+        } else {
+          const err = await res.json();
+          alert("Error: " + (err.detail || "No se pudo procesar la liberación."));
+        }
+      } catch (err) {
+        alert("Error de red al liberar recompensa.");
+      }
     }
   </script>
 </body>

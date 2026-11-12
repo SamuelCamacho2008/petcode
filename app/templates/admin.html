@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PetCode — Panel Financiero de Administración (5% Comisión)</title>
+  <link rel="icon" type="image/svg+xml" href="/static/img/logo.svg">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <style>
+    .admin-metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 18px;
+      margin-top: 24px;
+      margin-bottom: 24px;
+    }
+    .metric-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+    }
+    .metric-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+    }
+    .metric-card.fee::before { background: #10b981; }
+    .metric-card.payout::before { background: #3b82f6; }
+    .metric-card.escrow::before { background: #f59e0b; }
+    .metric-card.total::before { background: #6366f1; }
+
+    .metric-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--color-text-muted);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .metric-value {
+      font-size: 1.85rem;
+      font-weight: 900;
+      color: var(--color-text);
+      line-height: 1.1;
+      margin-bottom: 4px;
+    }
+    .metric-sub {
+      font-size: 0.8rem;
+      color: var(--color-text-muted);
+    }
+    .badge-admin-crown {
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fde68a;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 0.82rem;
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .status-escrow {
+      background: #fef3c7;
+      color: #b45309;
+      border: 1px solid #fde68a;
+    }
+    .status-released {
+      background: #d1fae5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+    }
+    .status-refunded {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      margin-top: 20px;
+      box-shadow: var(--shadow-sm);
+    }
+    table.admin-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.88rem;
+    }
+    table.admin-table th {
+      background: #f8fafc;
+      padding: 14px 18px;
+      font-weight: 700;
+      color: #475569;
+      border-bottom: 1px solid var(--color-border);
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+    table.admin-table td {
+      padding: 16px 18px;
+      border-bottom: 1px solid #f1f5f9;
+      vertical-align: middle;
+    }
+    table.admin-table tr:hover {
+      background: #f8fafc;
+    }
+  </style>
+</head>
+<body style="background: #f8fafc;">
+  <header class="header">
+    <a href="/dashboard" class="brand">
+      <img src="/static/img/logo.svg" alt="PetCode Logo" class="brand-icon">
+      <span>PetCode</span>
+    </a>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <span class="badge-admin-crown">
+        👑 Administrador: {{ current_user.email }}
+      </span>
+      <a href="/cuenta" class="btn" style="min-height: 40px; width: auto; padding: 6px 14px; font-size: 0.85rem; background: var(--color-surface); border: 1px solid var(--color-border);">
+        Mi Cuenta
+      </a>
+      <a href="/dashboard" class="btn" style="min-height: 40px; width: auto; padding: 6px 14px; font-size: 0.85rem; background: var(--color-primary); color: white;">
+        Volver al Dashboard
+      </a>
+    </div>
+  </header>
+
+  <main class="container" style="max-width: 1100px; padding-top: 30px; padding-bottom: 60px;">
+    <!-- Welcome Header -->
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+      <div>
+        <h1 style="font-size: 1.8rem; font-weight: 900; color: #0f172a; margin: 0 0 6px 0;">
+          💰 Panel Financiero y Control de Pagos
+        </h1>
+        <p style="color: #64748b; font-size: 0.95rem; margin: 0;">
+          Gestión de custodia de recompensas y liquidación automática del <strong>5% de ganancias para PetCode</strong>.
+        </p>
+      </div>
+      <div>
+        <button onclick="location.reload()" class="btn" style="min-height: 40px; width: auto; padding: 8px 16px; font-size: 0.85rem; background: #ffffff; border: 1px solid #cbd5e1;">
+          🔄 Actualizar Datos
+        </button>
+      </div>
+    </div>
+
+    <!-- Explanatory Banner -->
+    <div style="margin-top: 20px; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 12px; padding: 16px 20px; display: flex; align-items: center; gap: 14px;">
+      <div style="font-size: 1.8rem;">💡</div>
+      <div style="font-size: 0.88rem; color: #065f46; line-height: 1.5;">
+        <strong>Modelo de Negocio PetCode (Comisión 5% / Rescatista 95%):</strong>
+        Cuando un propietario reporta su mascota como perdida y fija una recompensa, el valor queda asegurado en <em>Depósito de Garantía (Escrow)</em>. Al verificarse el rescate en el chat seguro y pulsar <strong>"Liberar Recompensa"</strong>, el sistema desglosa automáticamente el <strong>95% para el rescatista</strong> y retiene el <strong>5% como utilidad neta de PetCode</strong>.
+      </div>
+    </div>
+
+    <!-- Metrics Cards Grid -->
+    <div class="admin-metrics-grid">
+      <!-- 1. Ganancias PetCode (5%) -->
+      <div class="metric-card fee">
+        <div>
+          <div class="metric-title">
+            <span>📈 Ganancias PetCode (5%)</span>
+          </div>
+          <div class="metric-value" style="color: #059669;" id="collectedEarnings">
+            ${{ "{:,.0f}".format(analytics.platform_earnings_collected) }} COP
+          </div>
+        </div>
+        <div class="metric-sub">
+          <strong>${{ "{:,.0f}".format(analytics.platform_earnings_pending) }} COP</strong> en custodia pendiente de rescate
+        </div>
+      </div>
+
+      <!-- 2. Recompensas a Rescatistas (95%) -->
+      <div class="metric-card payout">
+        <div>
+          <div class="metric-title">
+            <span>🤝 Pagos a Rescatistas (95%)</span>
+          </div>
+          <div class="metric-value" style="color: #2563eb;" id="rescuerPayouts">
+            ${{ "{:,.0f}".format(analytics.rescuer_payouts_completed) }} COP
+          </div>
+        </div>
+        <div class="metric-sub">
+          <strong>${{ "{:,.0f}".format(analytics.rescuer_payouts_pending) }} COP</strong> en proceso de entrega
+        </div>
+      </div>
+
+      <!-- 3. Fondos en Custodia Activa -->
+      <div class="metric-card escrow">
+        <div>
+          <div class="metric-title">
+            <span>🔒 Fondos en Custodia (Escrow)</span>
+          </div>
+          <div class="metric-value" style="color: #d97706;" id="escrowVolume">
+            ${{ "{:,.0f}".format(analytics.escrow_volume) }} COP
+          </div>
+        </div>
+        <div class="metric-sub">
+          {{ analytics.active_escrows }} recompensa(s) activa(s) por mascotas perdidas
+        </div>
+      </div>
+
+      <!-- 4. Volumen Total -->
+      <div class="metric-card total">
+        <div>
+          <div class="metric-title">
+            <span>📊 Volumen Total Gestionado</span>
+          </div>
+          <div class="metric-value" style="color: #4f46e5;" id="totalVolume">
+            ${{ "{:,.0f}".format(analytics.total_volume) }} COP
+          </div>
+        </div>
+        <div class="metric-sub">
+          {{ analytics.total_transactions }} transacciones registradas en total
+        </div>
+      </div>
+    </div>
+
+    <!-- Transactions Section -->
+    <div style="margin-top: 32px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h2 style="font-size: 1.25rem; font-weight: 800; color: #1e293b; margin: 0;">
+          📜 Historial Detallado de Transacciones de Recompensa
+        </h2>
+        <span style="font-size: 0.82rem; color: #64748b; font-weight: 600;">
+          {{ payments|length }} registro(s)
+        </span>
+      </div>
+
+      {% if payments %}
+        <div class="table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Referencia / ID</th>
+                <th>Mascota & Dueño</th>
+                <th>Recompensa Total</th>
+                <th>Ganancia PetCode (5%)</th>
+                <th>Pago Rescatista (95%)</th>
+                <th>Estado</th>
+                <th>Fecha Creación</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in payments %}
+                <tr>
+                  <td>
+                    <code style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-size: 0.78rem; font-weight: 700; color: #334155;">
+                      {{ p.id[:10] }}...
+                    </code>
+                  </td>
+                  <td>
+                    <div style="font-weight: 800; color: #0f172a;">{{ p.pet_name }}</div>
+                    <div style="font-size: 0.78rem; color: #64748b;">{{ p.owner_email }}</div>
+                  </td>
+                  <td style="font-weight: 800; color: #0f172a;">
+                    ${{ "{:,.0f}".format(p.total_reward) }} COP
+                  </td>
+                  <td style="color: #059669; font-weight: 800;">
+                    +${{ "{:,.0f}".format(p.platform_fee) }} COP
+                    <span style="font-size: 0.7rem; font-weight: 600; color: #10b981;">(5%)</span>
+                  </td>
+                  <td style="color: #2563eb; font-weight: 700;">
+                    ${{ "{:,.0f}".format(p.rescuer_payout) }} COP
+                    <span style="font-size: 0.7rem; font-weight: 600; color: #3b82f6;">(95%)</span>
+                  </td>
+                  <td>
+                    {% if p.status.value == 'ESCROW' %}
+                      <span class="status-pill status-escrow">⏳ En Custodia</span>
+                    {% elif p.status.value == 'RELEASED' %}
+                      <span class="status-pill status-released">✅ Liquidado</span>
+                    {% else %}
+                      <span class="status-pill status-refunded">↩️ Reembolsado</span>
+                    {% endif %}
+                  </td>
+                  <td style="font-size: 0.8rem; color: #64748b;">
+                    {{ p.created_at.strftime('%Y-%m-%d %H:%M') if p.created_at else '-' }}
+                  </td>
+                  <td>
+                    <a href="/simulador/{{ p.pet_token }}" class="btn" style="min-height: 32px; width: auto; padding: 4px 10px; font-size: 0.78rem; background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd;">
+                      Ver Simulador
+                    </a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div style="background: white; border: 1px dashed #cbd5e1; border-radius: 12px; padding: 40px; text-align: center; color: #64748b;">
+          <div style="font-size: 2.5rem; margin-bottom: 8px;">🪙</div>
+          <div style="font-weight: 700; font-size: 1.1rem; color: #1e293b;">No hay transacciones registradas aún</div>
+          <p style="font-size: 0.9rem; margin-top: 6px;">
+            Cuando un dueño active la recompensa en el Dashboard de una mascota perdida, aparecerá listada aquí en custodia.
+          </p>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Security & Privacy Certification Box -->
+    <div style="margin-top: 36px; background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px;">
+      <h3 style="font-size: 1rem; font-weight: 800; color: #1e293b; margin: 0 0 10px 0; display: flex; align-items: center; gap: 8px;">
+        🛡️ Certificación de Privacidad y Aislamiento de Chats (IEEE Std 830-1998)
+      </h3>
+      <p style="font-size: 0.85rem; color: #475569; margin: 0; line-height: 1.6;">
+        El motor de PetCode asegura que los chats, coordenadas GPS de rescate y notificaciones de mensajes son <strong>estrictamente privados</strong> para cada dueño y el rescatista asignado a la placa escaneada. Ningún otro usuario común tiene acceso a las conversaciones ajenas ni a los números de teléfono o direcciones de los hogares.
+      </p>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-links">
+      <a href="/dashboard">Dashboard</a>
+      <a href="/cuenta">Mi Cuenta</a>
+      <a href="/admin">Panel Administrador</a>
+    </div>
+    <p>PetCode © 2026 — Identificación Inteligente y Rescate Seguro de Mascotas</p>
+  </footer>
+</body>
+</html>

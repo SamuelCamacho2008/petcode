@@ -46,4 +46,7 @@ class ChatSession(BaseModel):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     rescuer_alias: str = "Rescatista"
     owner_alias: str
+    reward_amount: float = 0.0
+    reward_status: str = "NONE" # NONE, ESCROW, RELEASED
+    payment_id: Optional[str] = None
     messages: list[ChatMessage] = Field(default_factory=list)

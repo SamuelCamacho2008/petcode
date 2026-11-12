@@ -43,6 +43,21 @@
       <h1 class="pet-title">{{ pet.name }}</h1>
       <p class="pet-subtitle">{{ pet.species }} · {{ pet.breed }} · {{ pet.owner_masked_name }}</p>
 
+      <!-- Banner de Recompensa Destacada para el Rescatista -->
+      {% if pet.reward_active and pet.reward_amount > 0 %}
+      <div style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 2px solid #f59e0b; border-radius: 12px; padding: 14px 16px; margin: 14px 0; text-align: center; box-shadow: 0 4px 6px -1px rgba(245, 158, 11, 0.2);">
+        <div style="font-size: 0.82rem; font-weight: 800; color: #92400e; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; justify-content: center; gap: 6px;">
+          <span>💰</span> ¡RECOMPENSA ECONÓMICA PROMETIDA!
+        </div>
+        <div style="font-size: 1.7rem; font-weight: 900; color: #78350f; margin: 4px 0;">
+          ${{ "{:,.0f}".format(pet.reward_amount) }} COP
+        </div>
+        <div style="font-size: 0.8rem; color: #92400e; font-weight: 600;">
+          Depósito en custodia asegurado por PetCode · Recibes ${{ "{:,.0f}".format(pet.reward_amount * 0.95) }} COP (95%) al entregar la mascota.
+        </div>
+      </div>
+      {% endif %}
+
       <!-- Badge de Advertencia Médica Destacada (RF-RES-01 CA2) -->
       {% if pet.medical_notes and pet.medical_notes.lower() != "ninguna" %}
       <div class="medical-alert-box" role="alert">

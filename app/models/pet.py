@@ -16,6 +16,8 @@ class PetBase(BaseModel):
     status: PetStatus = PetStatus.LOST
     medical_notes: str = ""
     owner_masked_name: str
+    reward_amount: float = 0.0
+    reward_active: bool = False
 
 class PetPublic(PetBase):
     """
@@ -38,6 +40,7 @@ class PetCreate(BaseModel):
     medical_notes: str = ""
     photo_url: str = "/static/img/luna.svg"
     status: PetStatus = PetStatus.AT_HOME
+    reward_amount: float = 0.0
 
 class Pet(PetBase):
     """
@@ -59,5 +62,7 @@ class Pet(PetBase):
             photo_url=self.photo_url,
             status=self.status,
             medical_notes=self.medical_notes,
-            owner_masked_name=self.owner_masked_name
+            owner_masked_name=self.owner_masked_name,
+            reward_amount=self.reward_amount,
+            reward_active=self.reward_active
         )

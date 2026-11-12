@@ -10,6 +10,79 @@
   <!-- Leaflet Map CSS & JS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <style>
+    .account-menu-container {
+      position: relative;
+      display: inline-block;
+    }
+    .account-menu-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: white;
+      border: 1.5px solid var(--color-border);
+      border-radius: 9999px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--color-text);
+      transition: all 0.2s ease;
+      min-height: 40px;
+    }
+    .account-menu-btn:hover {
+      background: #f8fafc;
+      border-color: #94a3b8;
+    }
+    .account-dropdown {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: calc(100% + 8px);
+      width: 290px;
+      background: white;
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
+      z-index: 1000;
+      overflow: hidden;
+    }
+    .account-dropdown.show {
+      display: block;
+    }
+    .dropdown-header {
+      padding: 12px 16px;
+      background: #f8fafc;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      color: #334155;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: background 0.15s ease;
+    }
+    .dropdown-item:hover {
+      background: #f1f5f9;
+      color: #0f172a;
+    }
+    .badge-admin-mini {
+      background: #fef3c7;
+      color: #b45309;
+      border: 1px solid #fde68a;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+  </style>
 </head>
 <body style="background: #f1f5f9;">
   <!-- Canvas para animación de Confeti de Recuperación -->
@@ -21,24 +94,67 @@
       <span>PetCode Propietario</span>
     </a>
     
-    <!-- Selector de Mascota para Pruebas Multi-Mascota y Botón de Registro -->
-    <div style="display: flex; align-items: center; gap: 8px;">
-      <label for="pet-selector" style="font-size: 0.82rem; font-weight: 700; color: var(--color-text-muted);">Mascota:</label>
-      <select id="pet-selector" class="input-field" style="margin-bottom: 0; min-height: 40px; padding: 4px 10px; font-weight: bold; width: auto;" onchange="window.location.href='/dashboard?token=' + this.value">
-        {% for p in all_pets %}
-          <option value="{{ p.token }}" {% if p.token == pet.token %}selected{% endif %}>
-            {{ p.name }} ({{ p.token }})
-          </option>
-        {% endfor %}
-      </select>
+    <!-- Selector de Mascota, Botón de Registro y Menú de Cuenta -->
+    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <label for="pet-selector" style="font-size: 0.82rem; font-weight: 700; color: var(--color-text-muted);">Mascota:</label>
+        <select id="pet-selector" class="input-field" style="margin-bottom: 0; min-height: 40px; padding: 4px 10px; font-weight: bold; width: auto;" onchange="window.location.href='/dashboard?token=' + this.value">
+          {% for p in all_pets %}
+            <option value="{{ p.token }}" {% if p.token == pet.token %}selected{% endif %}>
+              {{ p.name }} ({{ p.token }})
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
       <a href="/registro" class="btn btn-primary" style="min-height: 40px; padding: 6px 14px; font-size: 0.82rem; width: auto; font-weight: 700; text-decoration: none;">
         + Registrar Mascota
       </a>
+
+      <!-- Menú Desplegable de Cuenta / Perfil -->
+      <div class="account-menu-container">
+        <button type="button" class="account-menu-btn" id="accountMenuBtn" onclick="toggleAccountMenu()">
+          <span>👤 {{ current_user.full_name }}</span>
+          {% if is_admin %}
+            <span class="badge-admin-mini">👑 Admin</span>
+          {% endif %}
+          <span style="font-size: 0.65rem;">▼</span>
+        </button>
+        <div class="account-dropdown" id="accountDropdown">
+          <div class="dropdown-header">
+            <div style="font-weight: 800; color: #0f172a; font-size: 0.88rem;">{{ current_user.full_name }}</div>
+            <div style="font-size: 0.78rem; color: #64748b;">{{ current_user.email }}</div>
+            {% if is_admin %}
+              <div style="margin-top: 4px;">
+                <span class="badge-admin-mini">👑 Administrador PetCode</span>
+              </div>
+            {% endif %}
+          </div>
+          <a href="/cuenta" class="dropdown-item">
+            <span>⚙️</span> Mi Cuenta / Perfil
+          </a>
+          {% if is_admin %}
+            <a href="/admin" class="dropdown-item" style="color: #b45309; background: #fffbeb;">
+              <span>💰</span> Panel Financiero (Ganancias 5%)
+            </a>
+          {% endif %}
+          <a href="/registro" class="dropdown-item">
+            <span>➕</span> Registrar Otra Mascota
+          </a>
+          <div style="border-top: 1px solid var(--color-border); padding: 10px 16px; font-size: 0.75rem; color: #64748b; background: #f8fafc;">
+            <div style="font-weight: 700; margin-bottom: 6px;">🧪 Conmutar Usuario (Test de Privacidad):</div>
+            <div style="display: flex; gap: 6px;">
+              <button type="button" onclick="switchTestUser('samuelcamachoaguirre4@gmail.com')" style="flex:1; font-size:0.72rem; padding:5px 6px; border:1px solid #cbd5e1; border-radius:6px; background:white; cursor:pointer; font-weight:600;">Samuel (Admin)</button>
+              <button type="button" onclick="switchTestUser('dueno.max@example.com')" style="flex:1; font-size:0.72rem; padding:5px 6px; border:1px solid #cbd5e1; border-radius:6px; background:white; cursor:pointer; font-weight:600;">Dueño Max</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </header>
 
   <main class="container container-wide" style="padding-top: 16px;">
-    <!-- Fila Superior: Datos de Mascota, Switch de Estado y Botón Recuperada -->
+    <!-- Fila Superior: Datos de Mascota, Switch de Estado, Recompensa y Botón Recuperada -->
     <div class="card" style="margin-bottom: 20px;">
       <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px;">
         <!-- Información Principal -->
@@ -56,6 +172,19 @@
             <p style="font-size: 0.88rem; color: var(--color-text-muted); margin-top: 2px;">
               Placa: <strong>{{ pet.token }}</strong> · {{ pet.species }} ({{ pet.breed }}) · <a href="/q/{{ pet.token }}" target="_blank" style="color: var(--color-primary); text-decoration: underline; font-weight: 600;">Ver Ficha Pública</a>
             </p>
+
+            <!-- Banner de Recompensa Activa en Custodia -->
+            <div id="dashboard-reward-banner" style="margin-top: 8px; display: {% if pet.reward_active and pet.reward_amount > 0 %}flex{% else %}none{% endif %}; align-items: center; gap: 10px; background: #fef3c7; border: 1px solid #fde68a; padding: 6px 14px; border-radius: 8px; font-size: 0.82rem;">
+              <span style="font-size: 1.1rem;">💰</span>
+              <div>
+                <strong style="color: #92400e;">Recompensa Activa:</strong>
+                <span id="reward-amount-display" style="font-weight: 900; color: #78350f;">${{ "{:,.0f}".format(pet.reward_amount) }} COP</span>
+                <span style="color: #b45309; font-size: 0.75rem;">(95% Rescatista: ${{ "{:,.0f}".format(pet.reward_amount * 0.95) }} | 5% Comisión PetCode: ${{ "{:,.0f}".format(pet.reward_amount * 0.05) }})</span>
+              </div>
+              <button type="button" onclick="promptRewardChange()" style="background: none; border: none; color: #0284c7; text-decoration: underline; font-size: 0.78rem; font-weight: 700; cursor: pointer; margin-left: 8px;">
+                ✏️ Editar Recompensa
+              </button>
+            </div>
           </div>
         </div>
 
@@ -77,7 +206,7 @@
               class="btn"
               style="min-height: 42px; padding: 6px 14px; font-size: 0.85rem; border-radius: var(--radius-full); width: auto; {% if pet.status.value == 'LOST' %}background: var(--color-danger); color: white;{% else %}background: transparent; color: #475569;{% endif %}"
             >
-              🚨 Perdida
+              🚨 Perdida (Fijar Recompensa)
             </button>
           </div>
 
@@ -125,6 +254,13 @@
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
           <h2 style="font-size: 1.15rem; font-weight: 700;">💬 Chats Activos con Rescatistas</h2>
           <span class="badge-home" id="chat-count-badge" style="font-size: 0.75rem; padding: 4px 10px;">0 Activos</span>
+        </div>
+
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; font-size: 0.78rem; color: #1e40af; display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 1.1rem;">🔒</span>
+          <div>
+            <strong>Bandeja Privada y Segura:</strong> Solo tú ({% if current_user %}{{ current_user.email }}{% endif %}) puedes ver los chats de tus mascotas.
+          </div>
         </div>
 
         <div id="chats-container" style="display: flex; flex-direction: column; gap: 10px;">
@@ -334,24 +470,100 @@
       }
     }
 
-    // Switch de Estado (LOST / AT_HOME) (RF-DASH-01 CA1)
-    async function setPetStatus(newStatus) {
+    // Menú de Cuenta Dropdown
+    function toggleAccountMenu() {
+      const dropdown = document.getElementById("accountDropdown");
+      dropdown.classList.toggle("show");
+    }
+
+    window.addEventListener("click", (e) => {
+      const container = document.querySelector(".account-menu-container");
+      if (container && !container.contains(e.target)) {
+        document.getElementById("accountDropdown")?.classList.remove("show");
+      }
+    });
+
+    // Conmutador de Usuario para Pruebas de Privacidad
+    async function switchTestUser(email) {
       try {
+        const res = await fetch("/api/v1/account/switch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email })
+        });
+        if (res.ok) {
+          window.location.reload();
+        }
+      } catch (err) {
+        alert("Error al conmutar usuario.");
+      }
+    }
+
+    // Modificar monto de recompensa
+    async function promptRewardChange() {
+      const current = {{ pet.reward_amount or 0 }};
+      const input = prompt(
+        `💰 Modificar Recompensa para ${'{{ pet.name }}'}:\n\n` +
+        `Ingresa el monto total ofrecido en COP.\n` +
+        `• 95% será entregado al rescatista al confirmar el rescate.\n` +
+        `• 5% es retenido como comisión operativa por PetCode.\n\n` +
+        `Monto en COP:`,
+        current > 0 ? current : 150000
+      );
+      if (input === null) return;
+      const amount = parseFloat(input) || 0;
+      await setPetStatus("LOST", amount);
+      window.location.reload();
+    }
+
+    // Switch de Estado con Diálogo de Recompensa (RF-DASH-01 CA1)
+    async function promptRewardAndSetLost() {
+      const current = {{ pet.reward_amount or 0 }};
+      const input = prompt(
+        `🚨 Activando MODO MASCOTA PERDIDA para ${'{{ pet.name }}'}.\n\n` +
+        `¿Deseas fijar una recompensa económica en COP para la persona que la encuentre?\n` +
+        `PetCode retiene el 5% de comisión técnica al liberarse y el rescatista recibe el 95%.\n\n` +
+        `Ingresa el valor en COP (o deja 0 si no deseas recompensa):`,
+        current > 0 ? current : 150000
+      );
+      if (input === null) return;
+      const amount = parseFloat(input) || 0;
+      await setPetStatus("LOST", amount);
+    }
+
+    // Switch de Estado (LOST / AT_HOME) (RF-DASH-01 CA1)
+    async function setPetStatus(newStatus, rewardAmount = null) {
+      try {
+        const payload = { token: PET_TOKEN, status: newStatus };
+        if (rewardAmount !== null) {
+          payload.reward_amount = rewardAmount;
+        }
+
         const res = await fetch("/api/v1/dashboard/status", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token: PET_TOKEN, status: newStatus })
+          body: JSON.stringify(payload)
         });
+
         if (res.ok) {
           updateStatusUI(newStatus);
+          const banner = document.getElementById("dashboard-reward-banner");
+          if (banner) {
+            if (newStatus === "LOST" && rewardAmount > 0) {
+              banner.style.display = "flex";
+              document.getElementById("reward-amount-display").textContent = "$" + Number(rewardAmount).toLocaleString() + " COP";
+            } else if (newStatus === "AT_HOME") {
+              banner.style.display = "none";
+            }
+          }
         }
       } catch (e) {
         alert("Error al actualizar estado.");
       }
     }
 
-    document.getElementById("btn-status-home").addEventListener("click", () => setPetStatus("AT_HOME"));
-    document.getElementById("btn-status-lost").addEventListener("click", () => setPetStatus("LOST"));
+    document.getElementById("btn-status-home").addEventListener("click", () => setPetStatus("AT_HOME", 0));
+    document.getElementById("btn-status-lost").addEventListener("click", promptRewardAndSetLost);
 
     // Botón ¡Mascota Recuperada! con Confeti (RF-DASH-01 CA4)
     document.getElementById("btn-pet-recovered").addEventListener("click", async function() {

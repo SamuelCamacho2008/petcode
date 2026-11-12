@@ -3,9 +3,9 @@
 
 **Proyecto**: PetCode — Sistema Web de Identificación Inteligente y Rescate de Mascotas  
 **Auditor**: Sub-Agente 2 — PetCode QA & Security Automation Auditor (SDET & OWASP ASVS)  
-**Fecha de Certificación**: 2026-11-10 18:08:29  
+**Fecha de Certificación**: 2026-11-11 21:30:49  
 **Entorno de Ejecución**: Python 3.14 / pytest 9.1 / FastAPI / Starlette  
-**Tiempo Total de Batería**: 2.66 segundos  
+**Tiempo Total de Batería**: 2.65 segundos  
 **Resultado**: 9/9 pruebas en PASS (100.0%)  
 
 🟢 **ESTADO: CERTIFICACIÓN APROBADA (100% PASS)**

@@ -8,6 +8,7 @@ from app.models.chat import ChatSession
 class DashboardStatusUpdate(BaseModel):
     token: str
     status: PetStatus
+    reward_amount: Optional[float] = None
 
 class DashboardRecoverRequest(BaseModel):
     token: str
@@ -26,3 +27,6 @@ class DashboardDataResponse(BaseModel):
     recent_scans: List[ScanRecord]
     active_chat_sessions: List[ChatSession]
     recent_notifications: List[NotificationLog]
+    user_email: Optional[str] = None
+    is_admin: bool = False
+    platform_earnings: Optional[float] = None

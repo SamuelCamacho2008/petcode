@@ -2,6 +2,9 @@ from fastapi import APIRouter, Request, HTTPException, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from app.services.storage import storage
+from app.services.payment_service import payment_service
+from app.models.account import ADMIN_EMAIL
+from app.routers.api_account import get_current_user_from_request
 
 router = APIRouter(tags=["Public Views"])
 templates = Jinja2Templates(directory="app/templates")
@@ -13,11 +16,15 @@ async def view_registration_page(request: Request):
     Página principal de bienvenida y registro:
     Permite al usuario indicar quién es, registrar su mascota y obtener su placa QR inteligente.
     """
+    current_user = get_current_user_from_request(request)
+    is_admin = (current_user.email.lower() == ADMIN_EMAIL.lower())
     return templates.TemplateResponse(
         request=request,
         name="register.html",
         context={
-            "all_pets": list(storage.pets.values())
+            "all_pets": list(storage.pets.values()),
+            "current_user": current_user,
+            "is_admin": is_admin
         }
     )
 
@@ -59,13 +66,20 @@ async def view_chat_room(session_token: str, request: Request, role: str = "resc
             detail="Sesión de chat no encontrada o expirada."
         )
 
+    current_user = get_current_user_from_request(request)
+    is_admin = (current_user.email.lower() == ADMIN_EMAIL.lower())
+    payment = storage.get_payment_for_session(session_token)
+
     return templates.TemplateResponse(
         request=request,
         name="chat.html",
         context={
             "session": session,
             "session_token": session_token,
-            "current_role": role if role in ["rescuer", "owner"] else "rescuer"
+            "current_role": role if role in ["rescuer", "owner"] else "rescuer",
+            "current_user": current_user,
+            "is_admin": is_admin,
+            "payment": payment
         }
     )
 
@@ -73,13 +87,29 @@ async def view_chat_room(session_token: str, request: Request, role: str = "resc
 async def view_owner_dashboard(request: Request, token: str = "LUNA-COL-99"):
     """
     Panel de control privado del propietario con Geovisor Leaflet (RF-DASH-01).
+    Garantiza privacidad: Solo lista mascotas y chats del usuario actual.
     """
+    current_user = get_current_user_from_request(request)
+    is_admin = (current_user.email.lower() == ADMIN_EMAIL.lower())
+    user_pets = storage.get_pets_for_user(current_user.email)
+    
+    # Si no tiene mascotas aún, usar todas o fallback
+    if not user_pets:
+        user_pets = list(storage.pets.values())
+
     normalized_token = token.strip().upper()
     pet = storage.get_pet(normalized_token)
-    if not pet:
-        # Fallback a la primera mascota si no existe
-        pet = next(iter(storage.pets.values()))
+    
+    # Si la mascota solicitada no pertenece al usuario (y no es admin), redirigir a su primera mascota
+    if not pet or (pet not in user_pets and not is_admin):
+        pet = user_pets[0]
         normalized_token = pet.token
+
+    payment = None
+    for p in storage.payments.values():
+        if p.pet_token == normalized_token:
+            payment = p
+            break
 
     return templates.TemplateResponse(
         request=request,
@@ -87,7 +117,10 @@ async def view_owner_dashboard(request: Request, token: str = "LUNA-COL-99"):
         context={
             "pet": pet,
             "token": normalized_token,
-            "all_pets": list(storage.pets.values())
+            "all_pets": user_pets,
+            "current_user": current_user,
+            "is_admin": is_admin,
+            "payment": payment
         }
     )
 
@@ -121,7 +154,8 @@ async def view_collar_plaque(token: str, request: Request):
 async def view_chat_simulator(token: str, request: Request):
     """
     Simulador interactivo de pantalla dividida (Rescatista ↔ Dueño).
-    Permite probar en una sola ventana cómo conversan dos personas en tiempo real vía SSE.
+    Permite probar en una sola ventana cómo conversan dos personas en tiempo real vía SSE,
+    y cómo opera la liberación de recompensa con comisión del 5% de PetCode.
     """
     normalized_token = token.strip().upper()
     pet = storage.get_pet(normalized_token)
@@ -131,14 +165,70 @@ async def view_chat_simulator(token: str, request: Request):
             detail="Mascota no encontrada."
         )
 
-    # Crear o recuperar sesión de chat para la simulación
-    session = storage.create_chat_session(normalized_token)
+    session = storage.get_or_create_chat_session(normalized_token)
+    payment = storage.get_payment_for_session(session.session_token)
+
+    current_user = get_current_user_from_request(request)
+    is_admin = (current_user.email.lower() == ADMIN_EMAIL.lower())
 
     return templates.TemplateResponse(
         request=request,
         name="simulator.html",
         context={
             "pet": pet,
-            "session": session
+            "session": session,
+            "payment": payment,
+            "current_user": current_user,
+            "is_admin": is_admin
+        }
+    )
+
+@router.get("/cuenta", response_class=HTMLResponse)
+async def view_account_page(request: Request):
+    """
+    Página de información y configuración de la cuenta del usuario.
+    Permite ver y editar nombre, teléfono y dirección, y conmutar de usuario para pruebas.
+    """
+    current_user = get_current_user_from_request(request)
+    is_admin = (current_user.email.lower() == ADMIN_EMAIL.lower())
+    user_pets = storage.get_pets_for_user(current_user.email)
+    all_users = list(storage.users.values())
+
+    return templates.TemplateResponse(
+        request=request,
+        name="account.html",
+        context={
+            "current_user": current_user,
+            "is_admin": is_admin,
+            "user_pets": user_pets,
+            "all_users": all_users
+        }
+    )
+
+@router.get("/admin", response_class=HTMLResponse)
+async def view_admin_dashboard(request: Request):
+    """
+    Panel de Administración Exclusivo para samuelcamachoaguirre4@gmail.com.
+    Permite auditar todas las recompensas pagadas, en custodia y la comisión del 5% de PetCode.
+    """
+    current_user = get_current_user_from_request(request)
+    is_admin = (current_user.email.lower() == ADMIN_EMAIL.lower())
+    if not is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acceso restringido. Esta sección es exclusiva para el administrador (samuelcamachoaguirre4@gmail.com)."
+        )
+
+    all_payments = storage.get_all_payments()
+    analytics = payment_service.get_financial_analytics(all_payments)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="admin.html",
+        context={
+            "current_user": current_user,
+            "is_admin": is_admin,
+            "analytics": analytics,
+            "payments": all_payments
         }
     )
